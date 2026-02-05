@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gym workout planner</title>
+    <link rel="stylesheet" href="styles.css">
+    
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Workout Planner</h1>
+            <p class="tagline">Build Your Perfect Routine</p>
+        </header>
+
+        <div class="form-section">
+            <form id="workout-form">
+                <!-- Fitness Level -->
+                <div class="form-group">
+                    <label for="fitness-level">Fitness Level</label>
+                    <select id="fitness-level" required>
+                        <option value="">Select your level</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+
+                <!-- Goal -->
+                <div class="form-group">
+                    <label for="goal">Primary Goal</label>
+                    <select id="goal" required>
+                        <option value="">Select your goal</option>
+                        <option value="strength">Build Strength</option>
+                        <option value="muscle">Build Muscle</option>
+                        <option value="endurance">Improve Endurance</option>
+                    </select>
+                </div>
+
+                <!-- Days Per Week -->
+                <div class="form-group">
+                    <label for="days">Days Per Week</label>
+                    <select id="days" required>
+                        <option value="">Select days</option>
+                        <option value="3">3 Days</option>
+                        <option value="4">4 Days</option>
+                        <option value="5">5 Days</option>
+                    </select>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="generate-btn">Generate My Plan</button>
+            </form>
+        </div>
+
+        <!-- Workout plan will appear here -->
+        <div id="workout-plan"></div>
+    </div>
+
+    <!-- Link to external JavaScript file -->
+    <script src="script.js"></script>
+</body>
+</html>
