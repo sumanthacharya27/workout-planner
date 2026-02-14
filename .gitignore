@@ -1,0 +1,16 @@
+# .gitignore
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Editor Files
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+# Dependencies (if you add them later)
+node_modules/
