@@ -127,17 +127,24 @@ else if ($action === 'logout') {
 // ========================================
 else if ($action === 'check') {
     if (isLoggedIn()) {
-        sendResponse(true, 'User is logged in', [
-            'user_id' => $_SESSION['user_id'],
-            'email' => $_SESSION['email'],
-            'full_name' => $_SESSION['full_name']
+        http_response_code(200);
+        echo json_encode([
+            'success' => true,
+            'message' => 'User is logged in',
+            'data' => [
+                'user_id' => $_SESSION['user_id'],
+                'email' => $_SESSION['email'],
+                'full_name' => $_SESSION['full_name']
+            ]
         ]);
+        exit;
     } else {
-        sendResponse(false, 'Not logged in');
+        http_response_code(401);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Not logged in'
+        ]);
+        exit;
     }
-}
-
-else {
-    sendResponse(false, 'Invalid action');
 }
 ?>

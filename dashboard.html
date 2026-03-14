@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - GymPlanner</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">💪 GymPlanner</div>
+            <div class="nav-user">
+                <span id="userName">Loading...</span>
+                <button id="logoutBtn" class="btn-logout">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container">
+        
+        <!-- Dashboard Stats -->
+        <section class="stats-section">
+            <h1>Dashboard</h1>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-number" id="totalWorkouts">0</div>
+                    <div class="stat-label">Total Workouts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📅</div>
+                    <div class="stat-number" id="currentStreak">0</div>
+                    <div class="stat-label">Day Streak</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-number" id="totalTime">0</div>
+                    <div class="stat-label">Hours Trained</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">💪</div>
+                    <div class="stat-number" id="totalExercises">0</div>
+                    <div class="stat-label">Exercises Done</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="actions-section">
+            <h2>Quick Actions</h2>
+            <div class="action-buttons">
+                <button class="action-btn primary">
+                    <span class="btn-icon">📋</span>
+                    <span>Browse Workouts</span>
+                </button>
+                <button class="action-btn secondary">
+                    <span class="btn-icon">➕</span>
+                    <span>Create Workout</span>
+                </button>
+                <button class="action-btn tertiary">
+                    <span class="btn-icon">📊</span>
+                    <span>View Progress</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Recent Workouts -->
+        <section class="recent-section">
+            <h2>Recent Workouts</h2>
+            <div id="recentWorkouts" class="recent-list">
+                <p class="empty-state">No workouts yet. Start your first workout!</p>
+            </div>
+        </section>
+
+    </div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script>
+    // Check authentication and load user data
+    (async function() {
+        
+        // Check if logged in
+        const isLoggedIn = await checkAuth();
+        if (!isLoggedIn) {
+            window.location.href = 'index.html';
+            return;
+        }
+        
+        // Get user session data
+        try {
+            const response = await fetch(ENDPOINTS.CHECK_SESSION);
+            const sessionData = await response.json();
+            
+            console.log('Full Session Response:', sessionData);
+            
+            if (sessionData.success && sessionData.data) {
+                // Update user name
+                const userNameElement = document.getElementById('userName');
+                if (userNameElement) {
+                    userNameElement.textContent = sessionData.data.full_name;
+                }
+            }
+        } catch (error) {
+            console.error('Error loading user:', error);
+        }
+        
+        // Load stats
+        loadStats();
+        
+    })();
+    
+    // Wait for DOM to load for logout button
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Logout functionality
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async function() {
+                try {
+                    const response = await fetch(ENDPOINTS.LOGOUT, {
+                        method: 'POST'
+                    });
+                    const result = await response.json();
+                    
+                    console.log('Logout result:', result);
+                    
+                    // Redirect to login
+                    window.location.href = 'index.html';
+                    
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    window.location.href = 'index.html';
+                }
+            });
+        }
+        
+    });
+
+    function loadStats() {
+        // TODO: Load from database
+        const elements = {
+            totalWorkouts: document.getElementById('totalWorkouts'),
+            currentStreak: document.getElementById('currentStreak'),
+            totalTime: document.getElementById('totalTime'),
+            totalExercises: document.getElementById('totalExercises')
+        };
+        
+        if (elements.totalWorkouts) elements.totalWorkouts.textContent = '0';
+        if (elements.currentStreak) elements.currentStreak.textContent = '0';
+        if (elements.totalTime) elements.totalTime.textContent = '0';
+        if (elements.totalExercises) elements.totalExercises.textContent = '0';
+    }
+</script>
