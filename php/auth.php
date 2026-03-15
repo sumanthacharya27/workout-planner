@@ -17,14 +17,13 @@ if ($action === 'register') {
     $full_name = sanitizeInput($_POST['full_name'] ?? '');
     $height = intval($_POST['height'] ?? 0);
     $age = intval($_POST['age'] ?? 0);
-    $gender = sanitizeInput($_POST['gender'] ?? '');
+    $gender = sanitizeInput($_POST['gender'] ?? 'other');
     
-    // Validation
     if (empty($email) || empty($password) || empty($full_name)) {
         sendResponse(false, 'All fields are required');
     }
     
-    if (!isValidEmail($email)) {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         sendResponse(false, 'Invalid email address');
     }
     
@@ -32,7 +31,7 @@ if ($action === 'register') {
         sendResponse(false, 'Password must be at least 6 characters');
     }
     
-    // Check if email already exists
+    // Check if email exists
     $stmt = $conn->prepare("SELECT user_id FROM users WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -43,7 +42,7 @@ if ($action === 'register') {
     }
     
     // Hash password
-    $password_hash = hashPassword($password);
+    $password_hash = password_hash($password, PASSWORD_DEFAULT);
     
     // Insert user
     $stmt = $conn->prepare("INSERT INTO users (email, password_hash, full_name, height, age, gender) VALUES (?, ?, ?, ?, ?, ?)");
@@ -57,18 +56,9 @@ if ($action === 'register') {
         $stmt2->bind_param("i", $user_id);
         $stmt2->execute();
         
-        // Set session
-        $_SESSION['user_id'] = $user_id;
-        $_SESSION['email'] = $email;
-        $_SESSION['full_name'] = $full_name;
-        
-        sendResponse(true, 'Registration successful', [
-            'user_id' => $user_id,
-            'email' => $email,
-            'full_name' => $full_name
-        ]);
+        sendResponse(true, 'Registration successful', ['user_id' => $user_id]);
     } else {
-        sendResponse(false, 'Registration failed. Please try again.');
+        sendResponse(false, 'Registration failed');
     }
 }
 
@@ -80,12 +70,11 @@ else if ($action === 'login') {
     $email = sanitizeInput($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     
-    // Validation
     if (empty($email) || empty($password)) {
         sendResponse(false, 'Email and password are required');
     }
     
-    // Get user from database
+    // Get user
     $stmt = $conn->prepare("SELECT user_id, email, password_hash, full_name FROM users WHERE email = ? AND is_active = 1");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -98,7 +87,7 @@ else if ($action === 'login') {
     $user = $result->fetch_assoc();
     
     // Verify password
-    if (!verifyPassword($password, $user['password_hash'])) {
+    if (!password_verify($password, $user['password_hash'])) {
         sendResponse(false, 'Invalid email or password');
     }
     
@@ -126,25 +115,14 @@ else if ($action === 'logout') {
 // CHECK SESSION
 // ========================================
 else if ($action === 'check') {
-    if (isLoggedIn()) {
-        http_response_code(200);
-        echo json_encode([
-            'success' => true,
-            'message' => 'User is logged in',
-            'data' => [
-                'user_id' => $_SESSION['user_id'],
-                'email' => $_SESSION['email'],
-                'full_name' => $_SESSION['full_name']
-            ]
+    if (isset($_SESSION['user_id'])) {
+        sendResponse(true, 'Logged in', [
+            'user_id' => $_SESSION['user_id'],
+            'email' => $_SESSION['email'],
+            'full_name' => $_SESSION['full_name']
         ]);
-        exit;
     } else {
-        http_response_code(401);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Not logged in'
-        ]);
-        exit;
+        sendResponse(false, 'Not logged in');
     }
 }
 

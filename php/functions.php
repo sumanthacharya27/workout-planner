@@ -1,20 +1,6 @@
 <?php
-// Hash password
-function hashPassword($password) {
-    return password_hash($password, PASSWORD_DEFAULT);
-}
+// Helper functions
 
-// Verify password
-function verifyPassword($password, $hash) {
-    return password_verify($password, $hash);
-}
-
-// Validate email
-function isValidEmail($email) {
-    return filter_var($email, FILTER_VALIDATE_EMAIL);
-}
-
-// Sanitize input
 function sanitizeInput($data) {
     $data = trim($data);
     $data = stripslashes($data);
@@ -22,17 +8,6 @@ function sanitizeInput($data) {
     return $data;
 }
 
-// Check if user is logged in
-function isLoggedIn() {
-    return isset($_SESSION['user_id']);
-}
-
-// Get current user ID
-function getCurrentUserId() {
-    return $_SESSION['user_id'] ?? null;
-}
-
-// Send JSON response
 function sendResponse($success, $message, $data = null) {
     header('Content-Type: application/json');
     echo json_encode([
@@ -41,5 +16,25 @@ function sendResponse($success, $message, $data = null) {
         'data' => $data
     ]);
     exit;
+}
+
+function ensureUser($conn, $user_id) {
+    // Check if user exists
+    $stmt = $conn->prepare("SELECT user_id FROM users WHERE user_id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    if ($result->num_rows === 0) {
+        // Create default user
+        $stmt2 = $conn->prepare("INSERT INTO users (user_id, email, password_hash, full_name) VALUES (?, 'default@gym.com', 'N/A', 'Gym User')");
+        $stmt2->bind_param("i", $user_id);
+        $stmt2->execute();
+        
+        // Create user stats
+        $stmt3 = $conn->prepare("INSERT INTO user_stats (user_id) VALUES (?)");
+        $stmt3->bind_param("i", $user_id);
+        $stmt3->execute();
+    }
 }
 ?>
