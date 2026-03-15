@@ -53,15 +53,15 @@
         <section class="actions-section">
             <h2>Quick Actions</h2>
             <div class="action-buttons">
-                <button class="action-btn primary">
+                <button class="action-btn primary" onclick="window.location.href='workouts.html'">
                     <span class="btn-icon">📋</span>
                     <span>Browse Workouts</span>
                 </button>
-                <button class="action-btn secondary">
+                <button class="action-btn secondary" onclick="window.location.href='workouts.html'">
                     <span class="btn-icon">➕</span>
                     <span>Create Workout</span>
                 </button>
-                <button class="action-btn tertiary">
+                <button class="action-btn tertiary" onclick="window.location.href='progress.html'">
                     <span class="btn-icon">📊</span>
                     <span>View Progress</span>
                 </button>
@@ -78,81 +78,62 @@
 
     </div>
 
-<script src="js/config.js"></script>
-<script src="js/api.js"></script>
-<script>
-    // Check authentication and load user data
-    (async function() {
-        
-        // Check if logged in
-        const isLoggedIn = await checkAuth();
-        if (!isLoggedIn) {
-            window.location.href = 'index.html';
-            return;
-        }
-        
-        // Get user session data
-        try {
-            const response = await fetch(ENDPOINTS.CHECK_SESSION);
-            const sessionData = await response.json();
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/progress.js"></script>
+    <script>
+        // Check authentication and load user data
+        (async function() {
             
-            console.log('Full Session Response:', sessionData);
-            
-            if (sessionData.success && sessionData.data) {
-                // Update user name
-                const userNameElement = document.getElementById('userName');
-                if (userNameElement) {
-                    userNameElement.textContent = sessionData.data.full_name;
-                }
+            // Check if logged in
+            const isLoggedIn = await checkAuth();
+            if (!isLoggedIn) {
+                window.location.href = 'index.html';
+                return;
             }
-        } catch (error) {
-            console.error('Error loading user:', error);
-        }
-        
-        // Load stats
-        loadStats();
-        
-    })();
-    
-    // Wait for DOM to load for logout button
-    document.addEventListener('DOMContentLoaded', function() {
+            
+            // Get user session data
+            try {
+                const response = await fetch(ENDPOINTS.CHECK_SESSION);
+                const sessionData = await response.json();
+                
+                if (sessionData.success && sessionData.data) {
+                    const userNameElement = document.getElementById('userName');
+                    if (userNameElement) {
+                        userNameElement.textContent = sessionData.data.full_name;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading user:', error);
+            }
+            
+            // Load stats
+            loadDashboardStats();
+            
+        })();
         
         // Logout functionality
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async function() {
-                try {
-                    const response = await fetch(ENDPOINTS.LOGOUT, {
-                        method: 'POST'
-                    });
-                    const result = await response.json();
-                    
-                    console.log('Logout result:', result);
-                    
-                    // Redirect to login
-                    window.location.href = 'index.html';
-                    
-                } catch (error) {
-                    console.error('Logout error:', error);
-                    window.location.href = 'index.html';
-                }
-            });
-        }
-        
-    });
+        document.getElementById('logoutBtn').addEventListener('click', async function() {
+            await fetch(ENDPOINTS.LOGOUT, { method: 'POST' });
+            window.location.href = 'index.html';
+        });
 
-    function loadStats() {
-        // TODO: Load from database
-        const elements = {
-            totalWorkouts: document.getElementById('totalWorkouts'),
-            currentStreak: document.getElementById('currentStreak'),
-            totalTime: document.getElementById('totalTime'),
-            totalExercises: document.getElementById('totalExercises')
-        };
-        
-        if (elements.totalWorkouts) elements.totalWorkouts.textContent = '0';
-        if (elements.currentStreak) elements.currentStreak.textContent = '0';
-        if (elements.totalTime) elements.totalTime.textContent = '0';
-        if (elements.totalExercises) elements.totalExercises.textContent = '0';
-    }
-</script>
+        async function loadDashboardStats() {
+            try {
+                const result = await getUserStats();
+                
+                if (result.success && result.data) {
+                    const stats = result.data;
+                    
+                    document.getElementById('totalWorkouts').textContent = stats.total_workouts || '0';
+                    document.getElementById('currentStreak').textContent = stats.current_streak || '0';
+                    document.getElementById('totalTime').textContent = Math.floor((stats.total_time || 0) / 60);
+                    document.getElementById('totalExercises').textContent = stats.total_exercises || '0';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+    </script>
+</body>
+</html>

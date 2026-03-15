@@ -1,13 +1,13 @@
-document.addEventListener('DOMContentLoaded', async function() {
+// ========================================
+// AUTHENTICATION LOGIC
+// ========================================
+
+document.addEventListener('DOMContentLoaded', function() {
     
-    // Check if already logged in
-    const isLoggedIn = await checkAuth();
-    if (isLoggedIn) {
-        window.location.href = 'dashboard.html';
-        return;
-    }
+    // ========================================
+    // FORM SWITCHING
+    // ========================================
     
-    // Form switching
     const loginForm = document.getElementById('loginForm');
     const signupForm = document.getElementById('signupForm');
     const showSignupBtn = document.getElementById('showSignup');
@@ -27,96 +27,175 @@ document.addEventListener('DOMContentLoaded', async function() {
         clearErrors();
     });
     
-    // Login form submission
+    // ========================================
+    // LOGIN FUNCTIONALITY
+    // ========================================
+    
     const loginFormElement = document.getElementById('loginFormElement');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    
     loginFormElement.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const email = document.getElementById('loginEmail').value;
+        const email = document.getElementById('loginEmail').value.trim();
         const password = document.getElementById('loginPassword').value;
         
-        setLoading(true, 'login');
-        clearError('loginError');
+        // Show loading state
+        setButtonLoading(loginBtn, true);
+        clearError(loginError);
         
-        const result = await apiCall(ENDPOINTS.LOGIN, {
-            email: email,
-            password: password
-        });
-        
-        if (result.success) {
-            window.location.href = 'dashboard.html';
-        } else {
-            showError('loginError', result.message);
-            setLoading(false, 'login');
+        try {
+            // Sign in with Firebase
+            const userCredential = await auth.signInWithEmailAndPassword(email, password);
+            console.log('✅ Login successful!', userCredential.user);
+            
+            // Redirect to main app
+            window.location.href = 'index.html';
+            
+        } catch (error) {
+            console.error('❌ Login error:', error);
+            showError(loginError, getErrorMessage(error.code));
+            setButtonLoading(loginBtn, false);
         }
     });
     
-    // Signup form submission
+    // ========================================
+    // SIGNUP FUNCTIONALITY
+    // ========================================
+    
     const signupFormElement = document.getElementById('signupFormElement');
+    const signupBtn = document.getElementById('signupBtn');
+    const signupError = document.getElementById('signupError');
+    
     signupFormElement.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const full_name = document.getElementById('signupName').value;
-        const email = document.getElementById('signupEmail').value;
+        const name = document.getElementById('signupName').value.trim();
+        const email = document.getElementById('signupEmail').value.trim();
         const password = document.getElementById('signupPassword').value;
-        const height = document.getElementById('signupHeight').value;
-        const age = document.getElementById('signupAge').value;
+        const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+        const height = parseInt(document.getElementById('signupHeight').value);
+        const age = parseInt(document.getElementById('signupAge').value);
         const gender = document.getElementById('signupGender').value;
         
-        setLoading(true, 'signup');
-        clearError('signupError');
+        // Validation
+        if (password !== passwordConfirm) {
+            showError(signupError, 'Passwords do not match!');
+            return;
+        }
         
-        const result = await apiCall(ENDPOINTS.REGISTER, {
-            full_name: full_name,
-            email: email,
-            password: password,
-            height: height,
-            age: age,
-            gender: gender
-        });
+        if (password.length < 6) {
+            showError(signupError, 'Password must be at least 6 characters!');
+            return;
+        }
         
-        if (result.success) {
-            window.location.href = 'dashboard.html';
-        } else {
-            showError('signupError', result.message);
-            setLoading(false, 'signup');
+        if (!gender) {
+            showError(signupError, 'Please select a gender!');
+            return;
+        }
+        
+        // Show loading state
+        setButtonLoading(signupBtn, true);
+        clearError(signupError);
+        
+        try {
+            // Create user account
+            const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+            
+            console.log('✅ User created!', user);
+            
+            // Create user profile in Firestore
+            await db.collection('users').doc(user.uid).set({
+                profile: {
+                    email: email,
+                    fullName: name,
+                    height: height,
+                    age: age,
+                    gender: gender,
+                    dateJoined: firebase.firestore.FieldValue.serverTimestamp(),
+                    isActive: true
+                },
+                stats: {
+                    totalWorkouts: 0,
+                    totalExercises: 0,
+                    totalTime: 0,
+                    currentStreak: 0
+                }
+            });
+            
+            console.log('✅ User profile created!');
+            
+            // Redirect to main app
+            window.location.href = 'index.html';
+            
+        } catch (error) {
+            console.error('❌ Signup error:', error);
+            showError(signupError, getErrorMessage(error.code));
+            setButtonLoading(signupBtn, false);
         }
     });
     
-    // Helper functions
-    function setLoading(loading, formType) {
-        const btn = formType === 'login' 
-            ? loginFormElement.querySelector('button')
-            : signupFormElement.querySelector('button');
-        
-        const text = btn.querySelector('.btn-text');
-        const loader = btn.querySelector('.btn-loader');
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    
+    function setButtonLoading(button, loading) {
+        const text = button.querySelector('.btn-text');
+        const loader = button.querySelector('.btn-loader');
         
         if (loading) {
             text.style.display = 'none';
             loader.style.display = 'inline';
-            btn.disabled = true;
+            button.disabled = true;
         } else {
             text.style.display = 'inline';
             loader.style.display = 'none';
-            btn.disabled = false;
+            button.disabled = false;
         }
     }
     
-    function showError(elementId, message) {
-        const element = document.getElementById(elementId);
+    function showError(element, message) {
         element.textContent = message;
-        element.style.display = 'block';
+        element.classList.add('show');
     }
     
-    function clearError(elementId) {
-        const element = document.getElementById(elementId);
+    function clearError(element) {
         element.textContent = '';
-        element.style.display = 'none';
+        element.classList.remove('show');
     }
     
     function clearErrors() {
-        clearError('loginError');
-        clearError('signupError');
+        clearError(loginError);
+        clearError(signupError);
     }
+    
+    function getErrorMessage(errorCode) {
+        const errorMessages = {
+            'auth/email-already-in-use': 'This email is already registered. Please login instead.',
+            'auth/invalid-email': 'Invalid email address.',
+            'auth/operation-not-allowed': 'Email/password sign-in is not enabled.',
+            'auth/weak-password': 'Password is too weak. Please use a stronger password.',
+            'auth/user-disabled': 'This account has been disabled.',
+            'auth/user-not-found': 'No account found with this email.',
+            'auth/wrong-password': 'Incorrect password. Please try again.',
+            'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
+            'auth/network-request-failed': 'Network error. Please check your connection.'
+        };
+        
+        return errorMessages[errorCode] || 'An error occurred. Please try again.';
+    }
+    
+    // ========================================
+    // CHECK IF ALREADY LOGGED IN
+    // ========================================
+    
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            // User is already logged in, redirect to main app
+            console.log('✅ User already logged in:', user.email);
+            window.location.href = 'index.html';
+        }
+    });
 });

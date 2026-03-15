@@ -147,4 +147,8 @@ else if ($action === 'check') {
         exit;
     }
 }
+
+else {
+    sendResponse(false, 'Invalid action');
+}
 ?>
