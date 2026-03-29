@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gym Workout Planner</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -17,8 +17,20 @@
                 <li><a href="#" class="nav-link" data-page="custom">Create</a></li>
                 <li><a href="#" class="nav-link" data-page="history">History</a></li>
                 <li><a href="#" class="nav-link" data-page="progress">Progress</a></li>
+                <li><a href="pages/about.php" class="nav-link" id="about-link">About</a></li>
+                <li><a href="pages/contact.php" class="nav-link" id="contact-link">Contact</a></li>
+                <li><a href="pages/privacy.php" class="nav-link" id="privacy-link">Privacy</a></li>
+                <li><a href="pages/terms.php" class="nav-link" id="terms-link">Terms</a></li>
             </ul>
         </div>
+        <script>
+        // Highlight nav link for static pages if loaded directly
+        const path = window.location.pathname;
+        if (path.includes('about.php')) document.getElementById('about-link')?.classList.add('active');
+        if (path.includes('contact.php')) document.getElementById('contact-link')?.classList.add('active');
+        if (path.includes('privacy.php')) document.getElementById('privacy-link')?.classList.add('active');
+        if (path.includes('terms.php')) document.getElementById('terms-link')?.classList.add('active');
+        </script>
     </nav>
 
     <!-- Main Container -->
@@ -272,6 +284,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js"></script>
+    <script src="scripts/app.js"></script>
 </body>
 </html>
