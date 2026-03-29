@@ -58,6 +58,14 @@ function bindFilters() {
 }
 
 function bindBuilder() {
+  const workoutNameInput = document.getElementById('workoutName');
+  const exerciseSection = document.getElementById('exerciseSection');
+
+  workoutNameInput.addEventListener('input', () => {
+    const hasName = workoutNameInput.value.trim().length > 0;
+    exerciseSection.classList.toggle('hidden', !hasName);
+  });
+
   document.getElementById('saveWorkoutBtn').addEventListener('click', async () => {
     const payload = {
       name: document.getElementById('workoutName').value.trim(),
@@ -73,6 +81,7 @@ function bindBuilder() {
     document.getElementById('exerciseList').innerHTML = '<p>No exercises added yet.</p>';
     document.getElementById('workoutName').value = '';
     document.getElementById('workoutDescription').value = '';
+    exerciseSection.classList.add('hidden');
     await loadCustomWorkouts();
     showView('workouts');
   });

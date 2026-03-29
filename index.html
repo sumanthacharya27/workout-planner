@@ -58,8 +58,10 @@
           </select>
         </div>
         <textarea id="workoutDescription" placeholder="Description"></textarea>
-        <button id="openExerciseModal" class="btn">+ Add Exercise</button>
-        <div id="exerciseList"></div>
+        <div id="exerciseSection" class="hidden">
+          <button id="openExerciseModal" class="btn">+ Add Exercise</button>
+          <div id="exerciseList"></div>
+        </div>
         <button id="saveWorkoutBtn" class="btn">Save Workout</button>
       </div>
     </section>
@@ -102,7 +104,7 @@
   <div id="exerciseModal" class="modal hidden">
     <div class="modal-card">
       <h3>Add Exercise</h3>
-      <input id="exName" placeholder="Exercise name" />
+      <input id="exName" type="text" placeholder="Exercise name" />
       <div class="grid-three">
         <input id="exSets" type="number" value="3" min="1" placeholder="Sets" />
         <input id="exReps" type="number" value="10" min="1" placeholder="Reps" />
@@ -110,8 +112,8 @@
       </div>
       <input id="exRest" type="number" value="60" min="0" placeholder="Rest seconds" />
       <div class="row">
-        <button id="cancelExercise" class="btn btn-outline">Cancel</button>
-        <button id="addExerciseBtn" class="btn">Add</button>
+        <button id="cancelExercise" type="button" class="btn btn-outline">Cancel</button>
+        <button id="addExerciseBtn" type="button" class="btn">Add</button>
       </div>
     </div>
   </div>

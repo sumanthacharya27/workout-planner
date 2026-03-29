@@ -1,7 +1,7 @@
 <?php
 // Database connection settings
 $host = 'localhost';
-$db   = 'gymplanner';
+$db   = 'gym_workout_planner';
 $user = 'root';
 $pass = '';
 $charset = 'utf8mb4';
