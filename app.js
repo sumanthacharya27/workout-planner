@@ -98,6 +98,7 @@ let currentWorkout = null;
 let currentExerciseIndex = 0;
 let restTimerInterval = null;
 let workoutStartTime = null;
+let workoutEventListenersSetup = false;
 
 // ========================================
 // UTILITY FUNCTIONS
@@ -279,11 +280,18 @@ function loadPreMadeWorkouts(filter = 'all') {
         </div>
     `).join('');
     
-    // Setup filter buttons
+    // Setup filter buttons - remove old listeners to prevent duplicates
     const filterButtons = document.querySelectorAll('#workouts .filter-btn');
     filterButtons.forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.replaceWith(newBtn);
+    });
+    
+    // Add fresh listeners
+    const newFilterButtons = document.querySelectorAll('#workouts .filter-btn');
+    newFilterButtons.forEach(btn => {
         btn.addEventListener('click', function() {
-            filterButtons.forEach(b => b.classList.remove('active'));
+            newFilterButtons.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             const filter = this.getAttribute('data-filter');
             loadPreMadeWorkouts(filter);
@@ -356,8 +364,19 @@ function addExerciseToList() {
     const rest = parseInt(document.getElementById('exerciseRest').value);
     const notes = document.getElementById('exerciseNotes').value.trim();
     
+    // Validation
     if (!name) {
         alert('Please enter an exercise name');
+        return;
+    }
+    
+    if (sets < 1 || reps < 1) {
+        alert('Sets and reps must be at least 1');
+        return;
+    }
+    
+    if (weight < 0 || rest < 0) {
+        alert('Weight and rest time cannot be negative');
         return;
     }
     
@@ -513,6 +532,11 @@ function viewWorkoutDetails(workoutId) {
 // ========================================
 
 function startWorkout(workout) {
+    // Clean up old listeners before starting new workout
+    if (workoutEventListenersSetup) {
+        removeWorkoutEventListeners();
+    }
+    
     currentWorkout = workout;
     currentExerciseIndex = 0;
     workoutStartTime = Date.now();
@@ -526,22 +550,73 @@ function startWorkout(workout) {
     navigateToPage('execute');
     displayExercise();
     
-    // Setup back button
-    document.getElementById('backToWorkouts').addEventListener('click', () => {
+    // Setup all event listeners fresh
+    setupWorkoutEventListeners();
+}
+
+function setupWorkoutEventListeners() {
+    const backBtn = document.getElementById('backToWorkouts');
+    const nextBtn = document.getElementById('nextExercise');
+    const prevBtn = document.getElementById('prevExercise');
+    const quitBtn = document.getElementById('quitWorkout');
+    const completeBtn = document.getElementById('completeWorkout');
+    
+    // Remove old listeners by cloning (this removes all listeners)
+    backBtn.replaceWith(backBtn.cloneNode(true));
+    nextBtn.replaceWith(nextBtn.cloneNode(true));
+    prevBtn.replaceWith(prevBtn.cloneNode(true));
+    quitBtn.replaceWith(quitBtn.cloneNode(true));
+    completeBtn.replaceWith(completeBtn.cloneNode(true));
+    
+    // Get fresh references after cloning
+    const backBtn2 = document.getElementById('backToWorkouts');
+    const nextBtn2 = document.getElementById('nextExercise');
+    const prevBtn2 = document.getElementById('prevExercise');
+    const quitBtn2 = document.getElementById('quitWorkout');
+    const completeBtn2 = document.getElementById('completeWorkout');
+    
+    backBtn2.addEventListener('click', () => {
         if (confirm('Are you sure you want to quit this workout? Your progress will not be saved.')) {
+            resetWorkoutState();
             navigateToPage('workouts');
         }
     });
     
-    // Setup navigation buttons
-    document.getElementById('nextExercise').addEventListener('click', nextExercise);
-    document.getElementById('prevExercise').addEventListener('click', prevExercise);
-    document.getElementById('completeWorkout').addEventListener('click', completeWorkout);
-    document.getElementById('quitWorkout').addEventListener('click', () => {
+    nextBtn2.addEventListener('click', nextExercise);
+    prevBtn2.addEventListener('click', prevExercise);
+    
+    completeBtn2.addEventListener('click', completeWorkout);
+    
+    quitBtn2.addEventListener('click', () => {
         if (confirm('Are you sure you want to quit? Progress will not be saved.')) {
+            resetWorkoutState();
             navigateToPage('workouts');
         }
     });
+    
+    workoutEventListenersSetup = true;
+}
+
+function removeWorkoutEventListeners() {
+    // Clean up event listeners to prevent memory leaks
+    const backBtn = document.getElementById('backToWorkouts');
+    const nextBtn = document.getElementById('nextExercise');
+    const prevBtn = document.getElementById('prevExercise');
+    const quitBtn = document.getElementById('quitWorkout');
+    const completeBtn = document.getElementById('completeWorkout');
+    
+    if (backBtn) backBtn.replaceWith(backBtn.cloneNode(true));
+    if (nextBtn) nextBtn.replaceWith(nextBtn.cloneNode(true));
+    if (prevBtn) prevBtn.replaceWith(prevBtn.cloneNode(true));
+    if (quitBtn) quitBtn.replaceWith(quitBtn.cloneNode(true));
+    if (completeBtn) completeBtn.replaceWith(completeBtn.cloneNode(true));
+}
+
+function resetWorkoutState() {
+    stopRestTimer();
+    currentWorkout = null;
+    currentExerciseIndex = 0;
+    workoutEventListenersSetup = false;
 }
 
 function displayExercise() {
@@ -683,6 +758,18 @@ function prevExercise() {
 }
 
 function completeWorkout() {
+    // Validate that at least some sets were completed
+    let totalCompletedSets = 0;
+    currentWorkout.exercises.forEach(ex => {
+        const completed = ex.setCheckboxes.filter(c => c).length;
+        totalCompletedSets += completed;
+    });
+    
+    if (totalCompletedSets === 0) {
+        alert('Please complete at least one set before finishing the workout!');
+        return;
+    }
+    
     const duration = Math.floor((Date.now() - workoutStartTime) / 1000 / 60); // minutes
     
     const workoutSession = {
@@ -693,7 +780,7 @@ function completeWorkout() {
             sets: ex.sets,
             reps: ex.reps,
             weight: ex.weight,
-            completedSets: ex.completedSets
+            completedSets: ex.setCheckboxes.filter(c => c).length
         })),
         duration: duration,
         completedAt: Date.now()
@@ -707,12 +794,15 @@ function completeWorkout() {
     // Update stats
     const stats = getFromStorage(STORAGE_KEYS.USER_STATS);
     stats.totalWorkouts++;
-    stats.totalExercises += currentWorkout.exercises.length;
+    stats.totalExercises += totalCompletedSets;
     stats.totalTime += duration;
     stats.currentStreak = calculateStreak(history);
     saveToStorage(STORAGE_KEYS.USER_STATS, stats);
     
-    alert(`Workout completed! 🎉\n\nDuration: ${duration} minutes\nExercises: ${currentWorkout.exercises.length}`);
+    // Reset workout state
+    resetWorkoutState();
+    
+    alert(`Workout completed! 🎉\n\nDuration: ${duration} minutes\nTotal Sets Completed: ${totalCompletedSets}/${currentWorkout.exercises.reduce((sum, ex) => sum + ex.sets, 0)}`);
     
     navigateToPage('dashboard');
 }
@@ -720,25 +810,50 @@ function completeWorkout() {
 function calculateStreak(history) {
     if (history.length === 0) return 0;
     
-    const today = new Date().setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const sortedHistory = history.sort((a, b) => b.completedAt - a.completedAt);
     
     let streak = 0;
-    let currentDate = today;
+    let currentDate = new Date(today);
     
     for (const workout of sortedHistory) {
-        const workoutDate = new Date(workout.completedAt).setHours(0, 0, 0, 0);
+        const workoutDate = new Date(workout.completedAt);
+        workoutDate.setHours(0, 0, 0, 0);
+        
         const daysDiff = Math.floor((currentDate - workoutDate) / (1000 * 60 * 60 * 24));
         
-        if (daysDiff === 0 || daysDiff === 1) {
-            if (daysDiff === 1) streak++;
-            currentDate = workoutDate;
+        // If workout is today or yesterday, continue streak
+        if (daysDiff === 0) {
+            // Workout today, continue
+            currentDate = new Date(workoutDate);
+        } else if (daysDiff === 1) {
+            // Workout yesterday, increment streak
+            streak++;
+            currentDate = new Date(workoutDate);
         } else {
+            // Gap in streak
             break;
         }
     }
     
-    return streak;
+    // Add 1 if there was at least one workout in current/recent dates
+    if (streak >= 0 && sortedHistory.length > 0) {
+        const firstWorkout = new Date(sortedHistory[0].completedAt);
+        firstWorkout.setHours(0, 0, 0, 0);
+        const daysSinceLastWorkout = Math.floor((today - firstWorkout) / (1000 * 60 * 60 * 24));
+        
+        // If last workout is today or yesterday, add 1 to account for current day
+        if (daysSinceLastWorkout <= 1) {
+            streak++;
+        } else {
+            // If it's before yesterday, streak is broken
+            streak = 0;
+        }
+    }
+    
+    return Math.max(0, streak);
 }
 
 // ========================================
@@ -782,11 +897,18 @@ function loadHistory(filter = 'all') {
         </div>
     `).join('');
     
-    // Setup filter buttons
+    // Setup filter buttons - remove old listeners to prevent duplicates
     const filterButtons = document.querySelectorAll('#history .filter-btn');
     filterButtons.forEach(btn => {
+        const newBtn = btn.cloneNode(true);
+        btn.replaceWith(newBtn);
+    });
+    
+    // Add fresh listeners
+    const newFilterButtons = document.querySelectorAll('#history .filter-btn');
+    newFilterButtons.forEach(btn => {
         btn.addEventListener('click', function() {
-            filterButtons.forEach(b => b.classList.remove('active'));
+            newFilterButtons.forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             const filter = this.getAttribute('data-filter');
             loadHistory(filter);
