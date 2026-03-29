@@ -1,289 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gym Workout Planner</title>
-    <link rel="stylesheet" href="styles/main.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GymPlanner Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="styles/main.css" />
 </head>
-<body>
-    <!-- Navigation Bar -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="logo">💪 GymPlanner</div>
-            <ul class="nav-menu">
-                <li><a href="#" class="nav-link active" data-page="dashboard">Dashboard</a></li>
-                <li><a href="#" class="nav-link" data-page="workouts">Workouts</a></li>
-                <li><a href="#" class="nav-link" data-page="custom">Create</a></li>
-                <li><a href="#" class="nav-link" data-page="history">History</a></li>
-                <li><a href="#" class="nav-link" data-page="progress">Progress</a></li>
-                <li><a href="pages/about.php" class="nav-link" id="about-link">About</a></li>
-                <li><a href="pages/contact.php" class="nav-link" id="contact-link">Contact</a></li>
-                <li><a href="pages/privacy.php" class="nav-link" id="privacy-link">Privacy</a></li>
-                <li><a href="pages/terms.php" class="nav-link" id="terms-link">Terms</a></li>
-            </ul>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col lg:flex-row lg:items-center gap-4">
+            <div class="flex items-center justify-between gap-3">
+                <h1 class="text-2xl font-bold text-brand-700">💪 GymPlanner Pro</h1>
+                <button id="menuToggle" class="lg:hidden rounded-md border border-slate-300 px-3 py-1.5 text-sm">Menu</button>
+            </div>
+            <nav id="topNav" class="hidden lg:flex flex-wrap gap-2 text-sm font-medium">
+                <button class="nav-btn px-3 py-2 rounded-md bg-brand-600 text-white" data-section="dashboard">Dashboard</button>
+                <button class="nav-btn px-3 py-2 rounded-md hover:bg-slate-100" data-section="workouts">Workouts</button>
+                <button class="nav-btn px-3 py-2 rounded-md hover:bg-slate-100" data-section="custom">Create</button>
+                <button class="nav-btn px-3 py-2 rounded-md hover:bg-slate-100" data-section="history">History</button>
+                <button class="nav-btn px-3 py-2 rounded-md hover:bg-slate-100" data-section="progress">Progress</button>
+                <a class="px-3 py-2 rounded-md hover:bg-slate-100" href="about.php">About</a>
+                <a class="px-3 py-2 rounded-md hover:bg-slate-100" href="pages/contact.php">Contact</a>
+                <a class="px-3 py-2 rounded-md hover:bg-slate-100" href="pages/privacy.php">Privacy</a>
+                <a class="px-3 py-2 rounded-md hover:bg-slate-100" href="pages/terms.php">Terms</a>
+            </nav>
         </div>
-        <script>
-        // Highlight nav link for static pages if loaded directly
-        const path = window.location.pathname;
-        if (path.includes('about.php')) document.getElementById('about-link')?.classList.add('active');
-        if (path.includes('contact.php')) document.getElementById('contact-link')?.classList.add('active');
-        if (path.includes('privacy.php')) document.getElementById('privacy-link')?.classList.add('active');
-        if (path.includes('terms.php')) document.getElementById('terms-link')?.classList.add('active');
-        </script>
-    </nav>
+    </header>
 
-    <!-- Main Container -->
-    <div class="container">
-        
-        <!-- Dashboard Section -->
-        <section id="dashboard" class="page-section active">
-            <h1>Welcome to GymPlanner</h1>
-            <p class="subtitle">Your personal workout companion</p>
-            
-            <div class="dashboard-stats">
-                <div class="stat-card">
-                    <div class="stat-icon">🔥</div>
-                    <div class="stat-number" id="totalWorkouts">0</div>
-                    <div class="stat-label">Total Workouts</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">📅</div>
-                    <div class="stat-number" id="currentStreak">0</div>
-                    <div class="stat-label">Day Streak</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⏱️</div>
-                    <div class="stat-number" id="totalTime">0</div>
-                    <div class="stat-label">Hours Trained</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">💪</div>
-                    <div class="stat-number" id="totalExercises">0</div>
-                    <div class="stat-label">Exercises Done</div>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section id="dashboard" class="app-section space-y-6">
+            <div>
+                <h2 class="text-3xl font-bold">Welcome back</h2>
+                <p class="text-slate-500">Plan, run, and track your training with a professional workflow.</p>
+            </div>
+            <div id="statsGrid" class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+            <div class="bg-white rounded-xl border border-slate-200 p-5">
+                <h3 class="font-semibold text-lg mb-3">Quick actions</h3>
+                <div class="flex flex-wrap gap-3">
+                    <button class="quick-btn rounded-lg bg-brand-600 text-white px-4 py-2" data-section="workouts">Browse Workouts</button>
+                    <button class="quick-btn rounded-lg bg-emerald-600 text-white px-4 py-2" data-section="custom">Create Workout</button>
+                    <button class="quick-btn rounded-lg bg-amber-600 text-white px-4 py-2" data-section="history">View History</button>
                 </div>
             </div>
-
-            <div class="quick-actions">
-                <h2>Quick Actions</h2>
-                <div class="action-buttons">
-                    <button class="action-btn primary" data-page="workouts">
-                        <span class="btn-icon">📋</span>
-                        <span>Browse Workouts</span>
-                    </button>
-                    <button class="action-btn secondary" data-page="custom">
-                        <span class="btn-icon">➕</span>
-                        <span>Create Workout</span>
-                    </button>
-                    <button class="action-btn tertiary" data-page="history">
-                        <span class="btn-icon">📊</span>
-                        <span>View History</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="recent-workouts">
-                <h2>Recent Workouts</h2>
-                <div id="recentWorkoutsList" class="recent-list">
-                    <p class="empty-state">No workouts yet. Start your first workout!</p>
-                </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-5">
+                <h3 class="font-semibold text-lg mb-3">Recent workouts</h3>
+                <div id="recentWorkouts" class="space-y-3 text-sm text-slate-600"></div>
             </div>
         </section>
 
-        <!-- Pre-Made Workouts Section -->
-        <section id="workouts" class="page-section">
-            <h1>Pre-Made Workouts</h1>
-            <p class="subtitle">Choose from our curated workout plans</p>
-
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="all">All</button>
-                <button class="filter-btn" data-filter="beginner">Beginner</button>
-                <button class="filter-btn" data-filter="intermediate">Intermediate</button>
-                <button class="filter-btn" data-filter="advanced">Advanced</button>
+        <section id="workouts" class="app-section hidden space-y-6">
+            <div>
+                <h2 class="text-3xl font-bold">Workout library</h2>
+                <p class="text-slate-500">Choose a curated plan and start training in one click.</p>
             </div>
+            <div class="flex flex-wrap gap-2" id="difficultyFilters"></div>
+            <div id="workoutCards" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+        </section>
 
-            <div id="workoutsList" class="workouts-grid">
-                <!-- Workouts will be dynamically loaded here -->
+        <section id="custom" class="app-section hidden space-y-6">
+            <div>
+                <h2 class="text-3xl font-bold">Create custom workout</h2>
+                <p class="text-slate-500">Build structured workouts with named exercises, sets, and rest targets.</p>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <input id="workoutName" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Workout name" />
+                    <input id="workoutDescription" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Workout description" />
+                </div>
+                <div class="grid md:grid-cols-5 gap-3">
+                    <input id="exerciseName" class="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2" placeholder="Exercise name" />
+                    <input id="exerciseSets" type="number" min="1" value="3" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Sets" />
+                    <input id="exerciseReps" type="number" min="1" value="10" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Reps" />
+                    <input id="exerciseRest" type="number" min="0" value="60" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Rest (sec)" />
+                </div>
+                <button id="addExercise" class="rounded-lg border border-brand-600 text-brand-700 px-4 py-2">+ Add Exercise</button>
+                <div id="exercisePreview" class="space-y-2"></div>
+                <div class="flex gap-2">
+                    <button id="saveWorkout" class="rounded-lg bg-brand-600 text-white px-4 py-2">Save Workout</button>
+                    <button id="clearWorkout" class="rounded-lg bg-slate-200 text-slate-800 px-4 py-2">Clear</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-5">
+                <h3 class="font-semibold text-lg mb-3">Saved custom workouts</h3>
+                <div id="customWorkouts" class="grid md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
             </div>
         </section>
 
-        <!-- Custom Workout Builder Section -->
-        <section id="custom" class="page-section">
-            <h1>Create Custom Workout</h1>
-            <p class="subtitle">Build your own personalized routine</p>
-
-            <div class="workout-form">
-                <div class="form-group">
-                    <label for="workoutName">Workout Name</label>
-                    <input type="text" id="workoutName" placeholder="e.g., My Leg Day">
-                </div>
-
-                <div class="form-group">
-                    <label for="workoutDescription">Description (Optional)</label>
-                    <textarea id="workoutDescription" rows="3" placeholder="Add notes about this workout..."></textarea>
-                </div>
-
-                <div class="exercises-section">
-                    <div class="section-header">
-                        <h2>Exercises</h2>
-                        <button class="add-exercise-btn" id="addExerciseBtn">+ Add Exercise</button>
-                    </div>
-                    <div id="exercisesList" class="exercises-list">
-                        <!-- Exercises will be added here -->
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button class="btn-cancel" id="cancelWorkout">Cancel</button>
-                    <button class="btn-save" id="saveWorkout">Save Workout</button>
-                </div>
+        <section id="history" class="app-section hidden space-y-6">
+            <div>
+                <h2 class="text-3xl font-bold">History</h2>
+                <p class="text-slate-500">Every completed workout is stored with duration and volume.</p>
             </div>
+            <div id="historyList" class="space-y-3"></div>
+        </section>
 
-            <div class="saved-workouts">
-                <h2>Your Saved Workouts</h2>
-                <div id="savedWorkoutsList" class="saved-list">
-                    <p class="empty-state">No custom workouts yet. Create your first one!</p>
-                </div>
+        <section id="progress" class="app-section hidden space-y-6">
+            <div>
+                <h2 class="text-3xl font-bold">Progress insights</h2>
+                <p class="text-slate-500">Track consistency, total volume, and milestones.</p>
+            </div>
+            <div id="milestones" class="grid md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+            <div class="bg-white rounded-xl border border-slate-200 p-5">
+                <h3 class="font-semibold text-lg mb-3">Personal records</h3>
+                <div id="records" class="grid md:grid-cols-2 gap-3 text-sm"></div>
             </div>
         </section>
 
-        <!-- Workout Execution Section -->
-        <section id="execute" class="page-section">
-            <div class="workout-header">
-                <button class="btn-back" id="backToWorkouts">← Back</button>
-                <h1 id="executeWorkoutName">Workout Name</h1>
+        <section id="execute" class="app-section hidden space-y-4">
+            <div class="flex items-center justify-between">
+                <h2 id="executeTitle" class="text-3xl font-bold"></h2>
+                <button id="exitWorkout" class="rounded-lg bg-slate-200 px-4 py-2">Exit</button>
             </div>
-
-            <div class="workout-progress">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="workoutProgressBar"></div>
-                </div>
-                <p class="progress-text"><span id="currentExerciseNum">0</span> / <span id="totalExercisesNum">0</span> exercises</p>
-            </div>
-
-            <div class="exercise-display" id="exerciseDisplay">
-                <!-- Current exercise will be displayed here -->
-            </div>
-
-            <div class="workout-controls">
-                <button class="btn-secondary" id="prevExercise">Previous</button>
-                <button class="btn-primary" id="nextExercise">Next Exercise</button>
-            </div>
-
-            <div class="workout-actions">
-                <button class="btn-danger" id="quitWorkout">Quit Workout</button>
-                <button class="btn-success" id="completeWorkout" style="display: none;">Complete Workout</button>
-            </div>
-        </section>
-
-        <!-- History Section -->
-        <section id="history" class="page-section">
-            <h1>Workout History</h1>
-            <p class="subtitle">Track your fitness journey</p>
-
-            <div class="filter-bar">
-                <button class="filter-btn active" data-filter="all">All Time</button>
-                <button class="filter-btn" data-filter="week">This Week</button>
-                <button class="filter-btn" data-filter="month">This Month</button>
-            </div>
-
-            <div id="historyList" class="history-list">
-                <p class="empty-state">No workout history yet. Complete your first workout!</p>
-            </div>
-        </section>
-
-        <!-- Progress Section -->
-        <section id="progress" class="page-section">
-            <h1>Your Progress</h1>
-            <p class="subtitle">Visualize your achievements</p>
-
-            <div class="progress-stats">
-                <div class="stat-card-large">
-                    <h3>Workout Frequency</h3>
-                    <canvas id="frequencyChart"></canvas>
-                </div>
-                <div class="stat-card-large">
-                    <h3>Exercise Distribution</h3>
-                    <canvas id="exerciseChart"></canvas>
-                </div>
-            </div>
-
-            <div class="personal-records">
-                <h2>Personal Records</h2>
-                <div id="prsList" class="prs-list">
-                    <p class="empty-state">Complete workouts to track your personal records!</p>
-                </div>
-            </div>
-
-            <div class="achievements">
-                <h2>Achievements & Milestones</h2>
-                <div id="achievementsList" class="achievements-grid">
-                    <div class="achievement-card locked">
-                        <div class="achievement-icon">🏆</div>
-                        <div class="achievement-name">First Workout</div>
-                        <div class="achievement-desc">Complete your first workout</div>
-                    </div>
-                    <div class="achievement-card locked">
-                        <div class="achievement-icon">🔥</div>
-                        <div class="achievement-name">Week Warrior</div>
-                        <div class="achievement-desc">7 day workout streak</div>
-                    </div>
-                    <div class="achievement-card locked">
-                        <div class="achievement-icon">💪</div>
-                        <div class="achievement-name">Century Club</div>
-                        <div class="achievement-desc">Complete 100 workouts</div>
-                    </div>
-                    <div class="achievement-card locked">
-                        <div class="achievement-icon">⚡</div>
-                        <div class="achievement-name">Consistency King</div>
-                        <div class="achievement-desc">30 day workout streak</div>
-                    </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
+                <div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div id="progressBar" class="h-full bg-brand-600 w-0"></div></div>
+                <p id="exerciseCounter" class="text-sm text-slate-500"></p>
+                <div id="exerciseNow" class="rounded-lg border border-slate-200 p-4"></div>
+                <div class="flex gap-2">
+                    <button id="prevExercise" class="rounded-lg bg-slate-200 px-4 py-2">Previous</button>
+                    <button id="nextExercise" class="rounded-lg bg-brand-600 text-white px-4 py-2">Next</button>
+                    <button id="completeWorkout" class="hidden rounded-lg bg-emerald-600 text-white px-4 py-2">Complete workout</button>
                 </div>
             </div>
         </section>
+    </main>
 
-    </div>
-
-    <!-- Modal for Exercise Details -->
-    <div id="exerciseModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Add Exercise</h2>
-            <div class="modal-form">
-                <div class="form-group">
-                    <label for="exerciseName">Exercise Name</label>
-                    <input type="text" id="exerciseName" placeholder="e.g., Barbell Squat">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="exerciseSets">Sets</label>
-                        <input type="number" id="exerciseSets" min="1" value="3">
-                    </div>
-                    <div class="form-group">
-                        <label for="exerciseReps">Reps</label>
-                        <input type="number" id="exerciseReps" min="1" value="10">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="exerciseWeight">Weight (kg)</label>
-                        <input type="number" id="exerciseWeight" min="0" step="0.5" placeholder="Optional">
-                    </div>
-                    <div class="form-group">
-                        <label for="exerciseRest">Rest (sec)</label>
-                        <input type="number" id="exerciseRest" min="0" value="60">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="exerciseNotes">Notes (Optional)</label>
-                    <textarea id="exerciseNotes" rows="2" placeholder="Add any notes..."></textarea>
-                </div>
-                <button class="btn-primary" id="saveExercise">Add Exercise</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="scripts/app.js"></script>
 </body>
 </html>
