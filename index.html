@@ -1,146 +1,121 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GymPlanner Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            50: '#eef2ff',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <link rel="stylesheet" href="styles/main.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Gym Workout Planner</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen">
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col lg:flex-row lg:items-center gap-4">
-            <div class="flex items-center justify-between gap-3">
-                <h1 class="text-2xl font-bold text-brand-700">💪 GymPlanner Pro</h1>
-                <button id="menuToggle" class="lg:hidden rounded-md border border-slate-300 px-3 py-1.5 text-sm">Menu</button>
-            </div>
-            <nav id="topNav" class="hidden lg:flex flex-wrap gap-2 text-sm font-medium">
-                <button class="nav-btn px-3 py-2 rounded-md bg-brand-600 text-white" data-section="dashboard">Dashboard</button>
-                <button class="nav-btn px-3 py-2 rounded-md hover:bg-slate-100" data-section="workouts">Workouts</button>
-                <button class="nav-btn px-3 py-2 rounded-md hover:bg-slate-100" data-section="custom">Create</button>
-                <button class="nav-btn px-3 py-2 rounded-md hover:bg-slate-100" data-section="history">History</button>
-                <button class="nav-btn px-3 py-2 rounded-md hover:bg-slate-100" data-section="progress">Progress</button>
-                <a class="px-3 py-2 rounded-md hover:bg-slate-100" href="about.php">About</a>
-                <a class="px-3 py-2 rounded-md hover:bg-slate-100" href="pages/contact.php">Contact</a>
-                <a class="px-3 py-2 rounded-md hover:bg-slate-100" href="pages/privacy.php">Privacy</a>
-                <a class="px-3 py-2 rounded-md hover:bg-slate-100" href="pages/terms.php">Terms</a>
-            </nav>
+<body>
+  <header class="topbar">
+    <h1>🔥 Gym Workout Planner</h1>
+    <div>
+      <span id="welcomeName"></span>
+      <button id="logoutBtn" class="btn btn-outline">Logout</button>
+    </div>
+  </header>
+
+  <nav class="nav-grid">
+    <button class="nav-btn active" data-view="dashboard">📊 Dashboard</button>
+    <button class="nav-btn" data-view="workouts">💪 Workouts</button>
+    <button class="nav-btn" data-view="builder">🧱 Build</button>
+    <button class="nav-btn" data-view="history">📅 History</button>
+    <button class="nav-btn" data-view="progress">🏆 Progress</button>
+  </nav>
+
+  <main>
+    <section id="dashboard" class="view">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="panel">
+        <h3>Recent 5 Workouts</h3>
+        <ul id="recentList"></ul>
+      </div>
+    </section>
+
+    <section id="workouts" class="view hidden">
+      <div class="row">
+        <h2>Pre-made Workouts</h2>
+        <select id="difficultyFilter">
+          <option value="all">All</option>
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate">Intermediate</option>
+          <option value="Advanced">Advanced</option>
+        </select>
+      </div>
+      <div id="premadeGrid" class="card-grid"></div>
+      <h2>Your Custom Workouts</h2>
+      <div id="customGrid" class="card-grid"></div>
+    </section>
+
+    <section id="builder" class="view hidden">
+      <div class="panel">
+        <h2>Create Custom Workout</h2>
+        <div class="grid-two">
+          <input id="workoutName" placeholder="Workout Name" />
+          <select id="workoutDifficulty">
+            <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+          </select>
         </div>
-    </header>
+        <textarea id="workoutDescription" placeholder="Description"></textarea>
+        <button id="openExerciseModal" class="btn">+ Add Exercise</button>
+        <div id="exerciseList"></div>
+        <button id="saveWorkoutBtn" class="btn">Save Workout</button>
+      </div>
+    </section>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <section id="dashboard" class="app-section space-y-6">
-            <div>
-                <h2 class="text-3xl font-bold">Welcome back</h2>
-                <p class="text-slate-500">Plan, run, and track your training with a professional workflow.</p>
-            </div>
-            <div id="statsGrid" class="grid sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
-            <div class="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 class="font-semibold text-lg mb-3">Quick actions</h3>
-                <div class="flex flex-wrap gap-3">
-                    <button class="quick-btn rounded-lg bg-brand-600 text-white px-4 py-2" data-section="workouts">Browse Workouts</button>
-                    <button class="quick-btn rounded-lg bg-emerald-600 text-white px-4 py-2" data-section="custom">Create Workout</button>
-                    <button class="quick-btn rounded-lg bg-amber-600 text-white px-4 py-2" data-section="history">View History</button>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 class="font-semibold text-lg mb-3">Recent workouts</h3>
-                <div id="recentWorkouts" class="space-y-3 text-sm text-slate-600"></div>
-            </div>
-        </section>
+    <section id="history" class="view hidden">
+      <div class="row">
+        <h2>Workout History</h2>
+        <select id="historyFilter">
+          <option value="all">All</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+      </div>
+      <div id="historyList"></div>
+    </section>
 
-        <section id="workouts" class="app-section hidden space-y-6">
-            <div>
-                <h2 class="text-3xl font-bold">Workout library</h2>
-                <p class="text-slate-500">Choose a curated plan and start training in one click.</p>
-            </div>
-            <div class="flex flex-wrap gap-2" id="difficultyFilters"></div>
-            <div id="workoutCards" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
-        </section>
+    <section id="progress" class="view hidden">
+      <div class="chart-grid">
+        <div class="panel"><canvas id="weeklyChart"></canvas></div>
+        <div class="panel"><canvas id="distributionChart"></canvas></div>
+      </div>
+      <div id="achievements" class="card-grid"></div>
+    </section>
 
-        <section id="custom" class="app-section hidden space-y-6">
-            <div>
-                <h2 class="text-3xl font-bold">Create custom workout</h2>
-                <p class="text-slate-500">Build structured workouts with named exercises, sets, and rest targets.</p>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-                <div class="grid md:grid-cols-2 gap-4">
-                    <input id="workoutName" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Workout name" />
-                    <input id="workoutDescription" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Workout description" />
-                </div>
-                <div class="grid md:grid-cols-5 gap-3">
-                    <input id="exerciseName" class="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2" placeholder="Exercise name" />
-                    <input id="exerciseSets" type="number" min="1" value="3" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Sets" />
-                    <input id="exerciseReps" type="number" min="1" value="10" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Reps" />
-                    <input id="exerciseRest" type="number" min="0" value="60" class="rounded-lg border border-slate-300 px-3 py-2" placeholder="Rest (sec)" />
-                </div>
-                <button id="addExercise" class="rounded-lg border border-brand-600 text-brand-700 px-4 py-2">+ Add Exercise</button>
-                <div id="exercisePreview" class="space-y-2"></div>
-                <div class="flex gap-2">
-                    <button id="saveWorkout" class="rounded-lg bg-brand-600 text-white px-4 py-2">Save Workout</button>
-                    <button id="clearWorkout" class="rounded-lg bg-slate-200 text-slate-800 px-4 py-2">Clear</button>
-                </div>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 class="font-semibold text-lg mb-3">Saved custom workouts</h3>
-                <div id="customWorkouts" class="grid md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
-            </div>
-        </section>
+    <section id="execution" class="view hidden">
+      <div class="panel">
+        <h2 id="execTitle"></h2>
+        <div class="progress-wrap"><div id="execProgress"></div></div>
+        <p id="execCounter"></p>
+        <div id="execExercise"></div>
+        <div class="row">
+          <button id="prevExercise" class="btn btn-outline">Prev</button>
+          <button id="nextExercise" class="btn">Next</button>
+          <button id="finishWorkout" class="btn hidden">Finish Workout</button>
+        </div>
+      </div>
+    </section>
+  </main>
 
-        <section id="history" class="app-section hidden space-y-6">
-            <div>
-                <h2 class="text-3xl font-bold">History</h2>
-                <p class="text-slate-500">Every completed workout is stored with duration and volume.</p>
-            </div>
-            <div id="historyList" class="space-y-3"></div>
-        </section>
+  <div id="exerciseModal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Add Exercise</h3>
+      <input id="exName" placeholder="Exercise name" />
+      <div class="grid-three">
+        <input id="exSets" type="number" value="3" min="1" placeholder="Sets" />
+        <input id="exReps" type="number" value="10" min="1" placeholder="Reps" />
+        <input id="exWeight" type="number" value="0" min="0" placeholder="Weight" />
+      </div>
+      <input id="exRest" type="number" value="60" min="0" placeholder="Rest seconds" />
+      <div class="row">
+        <button id="cancelExercise" class="btn btn-outline">Cancel</button>
+        <button id="addExerciseBtn" class="btn">Add</button>
+      </div>
+    </div>
+  </div>
 
-        <section id="progress" class="app-section hidden space-y-6">
-            <div>
-                <h2 class="text-3xl font-bold">Progress insights</h2>
-                <p class="text-slate-500">Track consistency, total volume, and milestones.</p>
-            </div>
-            <div id="milestones" class="grid md:grid-cols-2 xl:grid-cols-4 gap-4"></div>
-            <div class="bg-white rounded-xl border border-slate-200 p-5">
-                <h3 class="font-semibold text-lg mb-3">Personal records</h3>
-                <div id="records" class="grid md:grid-cols-2 gap-3 text-sm"></div>
-            </div>
-        </section>
-
-        <section id="execute" class="app-section hidden space-y-4">
-            <div class="flex items-center justify-between">
-                <h2 id="executeTitle" class="text-3xl font-bold"></h2>
-                <button id="exitWorkout" class="rounded-lg bg-slate-200 px-4 py-2">Exit</button>
-            </div>
-            <div class="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-                <div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div id="progressBar" class="h-full bg-brand-600 w-0"></div></div>
-                <p id="exerciseCounter" class="text-sm text-slate-500"></p>
-                <div id="exerciseNow" class="rounded-lg border border-slate-200 p-4"></div>
-                <div class="flex gap-2">
-                    <button id="prevExercise" class="rounded-lg bg-slate-200 px-4 py-2">Previous</button>
-                    <button id="nextExercise" class="rounded-lg bg-brand-600 text-white px-4 py-2">Next</button>
-                    <button id="completeWorkout" class="hidden rounded-lg bg-emerald-600 text-white px-4 py-2">Complete workout</button>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <script src="scripts/app.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
