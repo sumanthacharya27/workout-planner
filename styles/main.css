@@ -1,2 +1,10 @@
-/* Main stylesheet for GymPlanner */
-@import url('../styles.css');
+/* Small enhancement layer on top of Tailwind CDN styles */
+html,
+body {
+  scroll-behavior: smooth;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
