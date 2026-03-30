@@ -33,7 +33,8 @@ elseif ($action === 'login') {
     if ($result['success']) {
         success($result['message'], [
             'user_id' => $auth->getCurrentUserId(),
-            'user_name' => $auth->getCurrentUserName()
+            'user_name' => $auth->getCurrentUserName(),
+            'role' => $auth->getCurrentUserRole()
         ]);
     } else {
         error($result['message'], 401);
@@ -47,7 +48,8 @@ elseif ($action === 'status') {
     if ($auth->isLoggedIn()) {
         success("Logged in", [
             'user_id' => $auth->getCurrentUserId(),
-            'user_name' => $auth->getCurrentUserName()
+            'user_name' => $auth->getCurrentUserName(),
+            'role' => $auth->getCurrentUserRole()
         ]);
     } else {
         error("Not logged in", 401);

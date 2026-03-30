@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Cards Test</title>
+    <link rel="stylesheet" href="public/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Template Cards Test</h1>
+        <div id="templatesList" class="templates-list">
+            <!-- Template cards will be inserted here -->
+        </div>
+    </div>
+
+    <script src="public/app.js"></script>
+    <script>
+        // Simple test to load and display templates
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('api/templates.php');
+                const data = await response.json();
+
+                if (data.success && data.templates) {
+                    // Create a simple display function for testing
+                    const list = document.getElementById('templatesList');
+
+                    data.templates.forEach(template => {
+                        const item = document.createElement('div');
+                        item.className = 'template-item collapsed';
+
+                        const exerciseCount = template.exercises ? template.exercises.length : 0;
+
+                        // Create exercise sets display
+                        let setsHtml = '';
+                        if (template.exercise_sets) {
+                            const setNames = ['Warm-up', 'Main Set', 'Accessory', 'Finisher'];
+                            let setIndex = 0;
+                            for (const [setGroup, exercises] of Object.entries(template.exercise_sets)) {
+                                const setName = setNames[setIndex] || `Set ${setIndex + 1}`;
+                                setsHtml += `<div class="template-set">
+                                    <div class="set-header">
+                                        <div class="set-number">${setName}</div>
+                                        <div class="set-exercise-count">${exercises.length} exercise${exercises.length > 1 ? 's' : ''}</div>
+                                    </div>
+                                    <div class="set-exercises">
+                                        ${exercises.map((ex, exIndex) => `
+                                            <div class="exercise-detail">
+                                                <div class="exercise-icon exercise-icon-${ex.muscle_group.toLowerCase().replace(' ', '-')}"></div>
+                                                <div class="exercise-info">
+                                                    <span class="exercise-name">${ex.name}</span>
+                                                    <span class="exercise-specs">${ex.sets}×${ex.reps} • ${Math.floor(ex.rest_seconds / 60)}:${(ex.rest_seconds % 60).toString().padStart(2, '0')} rest</span>
+                                                </div>
+                                                ${exIndex < exercises.length - 1 ? '<div class="exercise-divider">→</div>' : ''}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>`;
+                                setIndex++;
+                            }
+                            setsHtml = `<div class="template-sets">${setsHtml}</div>`;
+                        }
+
+                        item.innerHTML = `
+                            <div class="template-header">
+                                <div class="template-name">${template.name}</div>
+                                <div class="template-description">${template.description}</div>
+                                <div class="template-expand-icon">▼</div>
+                            </div>
+                            <div class="template-content">
+                                ${setsHtml}
+                                <div class="template-footer">
+                                    <div class="template-meta">
+                                        <span class="template-exercises">${exerciseCount} exercises</span>
+                                        <span class="template-difficulty template-difficulty-${template.difficulty.toLowerCase()}">${template.difficulty}</span>
+                                        ${template.estimated_duration ? `<span class="template-duration">• ${template.estimated_duration} min</span>` : ''}
+                                    </div>
+                                    <button class="btn btn-primary template-use-btn">Use Template</button>
+                                </div>
+                            </div>
+                        `;
+
+                        // Add click handler for expand/collapse
+                        item.addEventListener('click', (e) => {
+                            if (!e.target.classList.contains('template-use-btn')) {
+                                toggleExpansion(item);
+                            }
+                        });
+
+                        // Add separate handler for use button
+                        item.querySelector('.template-use-btn').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            alert(`Selected template: ${template.name}`);
+                        });
+
+                        list.appendChild(item);
+                    });
+                } else {
+                    document.getElementById('templatesList').innerHTML = '<p>No templates found</p>';
+                }
+            } catch (error) {
+                console.error('Error loading templates:', error);
+                document.getElementById('templatesList').innerHTML = '<p>Error loading templates</p>';
+            }
+        });
+
+        function toggleExpansion(item) {
+            const isCollapsed = item.classList.contains('collapsed');
+            const icon = item.querySelector('.template-expand-icon');
+
+            if (isCollapsed) {
+                item.classList.remove('collapsed');
+                item.classList.add('expanded');
+                icon.textContent = '▲';
+            } else {
+                item.classList.remove('expanded');
+                item.classList.add('collapsed');
+                icon.textContent = '▼';
+            }
+        }
+    </script>
+</body>
+</html>

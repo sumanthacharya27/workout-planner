@@ -50,10 +50,11 @@ session_start();
                     <h1 class="logo">GymPlanner Pro</h1>
                     <nav class="nav">
                         <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+                        <button class="nav-btn" data-page="templates">Templates</button>
                         <button class="nav-btn" data-page="library">Exercises</button>
                         <button class="nav-btn" data-page="builder">Build Workout</button>
                         <button class="nav-btn" data-page="workouts">My Workouts</button>
-                    </nav>
+                        <button class="nav-btn" data-page="history">History</button>                    </nav>
                     <div class="user-menu">
                         <span id="userName"></span>
                         <button id="logoutBtn" class="btn btn-outline">Logout</button>
@@ -83,9 +84,42 @@ session_start();
                 </div>
             </section>
             
+            <!-- Workout Templates Page -->
+            <section id="templatesPage" class="page hidden">
+                <h2>Workout Templates</h2>
+                <p class="page-description">Choose from professionally designed workout routines to get started quickly.</p>
+
+                <div id="templateAdminPanel" class="admin-panel hidden">
+                    <h3>Admin: Add New Template</h3>
+                    <div class="admin-grid">
+                        <input type="hidden" id="adminTemplateId" />
+                        <input id="adminTemplateName" placeholder="Template name" />
+                        <input id="adminTemplateCategory" placeholder="Category" />
+                        <input id="adminTemplateDifficulty" placeholder="Difficulty" />
+                        <input type="number" id="adminTemplateDuration" placeholder="Duration (min)" min="5" />
+                        <textarea id="adminTemplateDescription" placeholder="Description"></textarea>
+                        <button id="adminCreateTemplateBtn" class="btn btn-primary">Create Template</button>
+                    </div>
+                    <p class="admin-hint">Template exercises are added through the exercise page, then assigned by template update using API.</p>
+                </div>
+
+                <div id="templatesList" class="templates-list"></div>
+            </section>
+            
             <!-- Exercise Library Page -->
             <section id="libraryPage" class="page hidden">
                 <h2>Exercise Library</h2>
+                <div id="exerciseAdminPanel" class="admin-panel hidden">
+                    <h3>Admin: Add / Update Exercise</h3>
+                    <div class="admin-grid">
+                        <input type="hidden" id="adminExerciseId" />
+                        <input id="adminExerciseName" placeholder="Exercise name" />
+                        <input id="adminExerciseGroup" placeholder="Muscle group" />
+                        <input id="adminExerciseDifficulty" placeholder="Difficulty" />
+                        <input id="adminExerciseInstructions" placeholder="Instructions" />
+                        <button id="adminCreateExerciseBtn" class="btn btn-primary">Create Exercise</button>
+                    </div>
+                </div>
                 <div class="filters">
                     <select id="muscleFilter">
                         <option value="">All Muscle Groups</option>
@@ -134,6 +168,65 @@ session_start();
             <section id="workoutsPage" class="page hidden">
                 <h2>My Workouts</h2>
                 <div id="workoutsList" class="workouts-list"></div>
+            </section>
+            
+            <!-- Workout Execution Page -->
+            <section id="executionPage" class="page hidden">
+                <h2>Workout Execution</h2>
+                <div class="execution-header">
+                    <h3 id="executionWorkoutName">Workout Name</h3>
+                    <p id="executionWorkoutDesc">Workout description</p>
+                    <div class="execution-progress">
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <span id="progressText">0/0 exercises</span>
+                    </div>
+                </div>
+                <div id="executionTimer" class="execution-timer">00:00</div>
+                
+                <div id="currentExercise" class="current-exercise">
+                    <h3 id="currentExerciseName">Exercise Name</h3>
+                    <div class="exercise-details">
+                        <span id="currentExerciseSets">3 sets</span> × 
+                        <span id="currentExerciseReps">10 reps</span> • 
+                        <span id="currentExerciseRest">60s rest</span>
+                    </div>
+                    
+                    <div class="set-tracker">
+                        <h4>Sets</h4>
+                        <div id="setList" class="set-list"></div>
+                    </div>
+                    
+                    <div class="rep-counter">
+                        <h4>Current Set Reps</h4>
+                        <div class="rep-controls">
+                            <button id="repMinus" class="rep-btn">-</button>
+                            <span id="repCount">0</span>
+                            <button id="repPlus" class="rep-btn">+</button>
+                        </div>
+                        <button id="completeSetBtn" class="btn btn-secondary">Complete Set</button>
+                    </div>
+                    
+                    <div class="exercise-notes">
+                        <textarea id="exerciseNotes" placeholder="Add notes for this exercise..."></textarea>
+                    </div>
+                </div>
+                
+                <div id="executionSteps" class="execution-steps"></div>
+                <div class="execution-controls">
+                    <button id="prevExerciseBtn" class="btn btn-outline">Previous</button>
+                    <button id="nextExerciseBtn" class="btn btn-outline">Next</button>
+                    <button id="completeWorkoutBtn" class="btn btn-primary">Complete Workout</button>
+                    <button id="startRestBtn" class="btn btn-secondary">Start Rest</button>
+                </div>
+                <div id="restCountdown" class="rest-countdown">Rest: 0s</div>
+            </section>
+            
+            <!-- Workout History Page -->
+            <section id="historyPage" class="page hidden">
+                <h2>Workout History</h2>
+                <div id="historyList" class="history-list"></div>
             </section>
         </main>
     </div>

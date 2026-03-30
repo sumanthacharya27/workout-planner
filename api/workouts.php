@@ -78,6 +78,50 @@ elseif ($action === 'get_detail') {
     $workout['exercises'] = $exercises;
     success("Workout details fetched", ['workout' => $workout]);
 }
+elseif ($action === 'get_history') {
+    $result = $db->query("SELECT wh.*, cw.name AS workout_name FROM workout_history wh JOIN custom_workouts cw ON wh.workout_id=cw.id WHERE wh.user_id = $user_id ORDER BY completed_at DESC");
+    $history = [];
+    while ($row = $result->fetch_assoc()) {
+        $history[] = $row;
+    }
+    success("History fetched", ['history' => $history]);
+}
+elseif ($action === 'complete') {
+    $workout_id = (int)($input['workout_id'] ?? 0);
+    $duration = (int)($input['duration_minutes'] ?? 0);
+    $notes = $db->escape($input['notes'] ?? '');
+    $execution_data = $input['execution_data'] ?? [];
+
+    // validate workout ownership
+    $check = $db->query("SELECT id FROM custom_workouts WHERE id = $workout_id AND user_id = $user_id");
+    if ($check->num_rows === 0) {
+        error("Workout not found", 404);
+    }
+
+    $sql = "INSERT INTO workout_history (user_id, workout_id, completed_at, duration_minutes, notes) VALUES ($user_id, $workout_id, NOW(), $duration, '$notes')";
+    if ($db->query($sql)) {
+        $history_id = $db->lastInsertId();
+        
+        // Save detailed execution data if provided
+        if (!empty($execution_data)) {
+            foreach ($execution_data as $exercise_index => $sets) {
+                foreach ($sets as $set_index => $set_data) {
+                    if ($set_data['completed']) {
+                        $reps = (int)($set_data['reps'] ?? 0);
+                        $set_notes = $db->escape($set_data['notes'] ?? '');
+                        
+                        // You could add a workout_execution_details table here for detailed tracking
+                        // For now, we'll just log the completion
+                    }
+                }
+            }
+        }
+        
+        success("Workout completed and logged", ['history_id' => $history_id]);
+    } else {
+        error("Failed to log workout history", 500);
+    }
+}
 else {
     error("Unknown action", 400);
 }
