@@ -33,15 +33,18 @@ class App {
     }
     
     setupEventListeners() {
+        document.getElementById('landingLoginBtn').addEventListener('click', () => this.showAuthModal('login'));
+        document.getElementById('landingRegisterBtn').addEventListener('click', () => this.showAuthModal('register'));
+        document.getElementById('heroStartBtn').addEventListener('click', () => this.showAuthModal('register'));
+        document.getElementById('heroLibraryBtn').addEventListener('click', () => {
+            document.querySelector('.landing-programs').scrollIntoView({ behavior: 'smooth' });
+        });
+        document.getElementById('closeAuthModal').addEventListener('click', () => this.hideAuthModal());
+
         // Auth modal form toggle
         document.querySelectorAll('.toggle-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
-                
-                e.target.classList.add('active');
-                const form = e.target.dataset.form;
-                document.getElementById(`${form}Form`).classList.add('active');
+                this.activateAuthForm(e.target.dataset.form);
             });
         });
         
@@ -110,11 +113,11 @@ class App {
                 await this.loadTemplates();
                 await this.loadUserWorkouts();
             } else {
-                this.showAuthModal();
+                this.showLanding();
             }
         } catch (err) {
             console.error('Auth check failed:', err);
-            this.showAuthModal();
+            this.showLanding();
         }
     }
     
@@ -191,18 +194,37 @@ class App {
             });
             
             this.user = null;
-            this.showAuthModal();
+            this.showLanding();
         } catch (err) {
             console.error('Logout failed:', err);
         }
     }
     
-    showAuthModal() {
-        document.getElementById('authModal').classList.remove('hidden');
+    activateAuthForm(form) {
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.form-section').forEach(f => f.classList.remove('active'));
+        document.querySelector(`.toggle-btn[data-form="${form}"]`).classList.add('active');
+        document.getElementById(`${form}Form`).classList.add('active');
+    }
+
+    showLanding() {
+        this.hideAuthModal();
+        document.getElementById('landingPage').classList.remove('hidden');
         document.getElementById('mainApp').classList.add('hidden');
+    }
+
+    showAuthModal(form = 'login') {
+        this.activateAuthForm(form);
+        document.getElementById('authModal').classList.remove('hidden');
+    }
+
+    hideAuthModal() {
+        document.getElementById('authModal').classList.add('hidden');
     }
     
     showApp() {
+        this.hideAuthModal();
+        document.getElementById('landingPage').classList.add('hidden');
         document.getElementById('authModal').classList.add('hidden');
         document.getElementById('mainApp').classList.remove('hidden');
         document.getElementById('userName').textContent = this.user.user_name;

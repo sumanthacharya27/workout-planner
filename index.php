@@ -11,10 +11,67 @@ session_start();
 </head>
 <body>
     <div id="app"></div>
+
+    <!-- Public Landing Page -->
+    <section id="landingPage" class="landing-page">
+        <header class="landing-header">
+            <div class="container landing-header-content">
+                <h1 class="landing-logo">GymPlanner Pro</h1>
+                <div class="landing-actions">
+                    <button id="landingLoginBtn" class="btn btn-outline">Login</button>
+                    <button id="landingRegisterBtn" class="btn btn-primary">Join Free</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="landing-hero">
+            <div class="container hero-grid">
+                <div class="hero-copy">
+                    <p class="hero-kicker">TRAIN SMARTER</p>
+                    <h2>Build stronger routines with a modern workout planner.</h2>
+                    <p class="hero-description">Discover exercise templates, customize your sessions, and track every set in one clean dashboard built for consistent progress.</p>
+                    <div class="hero-cta">
+                        <button id="heroStartBtn" class="btn btn-primary">Start Training</button>
+                        <button id="heroLibraryBtn" class="btn btn-outline">Explore Features</button>
+                    </div>
+                </div>
+                <div class="hero-panel">
+                    <h3>Today's Focus</h3>
+                    <ul>
+                        <li><span>Upper Strength Blast</span><strong>45 min</strong></li>
+                        <li><span>Push Day Builder</span><strong>18 exercises</strong></li>
+                        <li><span>Recovery & Mobility</span><strong>20 min</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <section class="landing-programs container">
+            <h3>Popular Training Paths</h3>
+            <div class="program-grid">
+                <article class="program-card">
+                    <p class="program-level">Beginner</p>
+                    <h4>Foundation Strength</h4>
+                    <p>Progressive 3-day split to build consistency and confidence.</p>
+                </article>
+                <article class="program-card">
+                    <p class="program-level">Intermediate</p>
+                    <h4>Muscle Builder</h4>
+                    <p>Volume-focused routine with balanced push, pull, and legs.</p>
+                </article>
+                <article class="program-card">
+                    <p class="program-level">Advanced</p>
+                    <h4>Performance Split</h4>
+                    <p>High-intensity sessions for strength and conditioning goals.</p>
+                </article>
+            </div>
+        </section>
+    </section>
     
     <!-- Auth Modal -->
     <div id="authModal" class="modal hidden">
         <div class="modal-content auth-form">
+            <button id="closeAuthModal" class="modal-close" type="button" aria-label="Close">×</button>
             <div class="form-toggle">
                 <button class="toggle-btn active" data-form="login">Login</button>
                 <button class="toggle-btn" data-form="register">Register</button>
