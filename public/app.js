@@ -197,15 +197,38 @@ class App {
         }
     }
     
+    getElement(id) {
+        return document.getElementById(id);
+    }
+
     showAuthModal() {
-        document.getElementById('authModal').classList.remove('hidden');
-        document.getElementById('mainApp').classList.add('hidden');
+        const authModal = this.getElement('authModal');
+        const mainApp = this.getElement('mainApp');
+        if (authModal) authModal.classList.remove('hidden');
+        if (mainApp) mainApp.classList.add('hidden');
     }
     
     showApp() {
-        document.getElementById('authModal').classList.add('hidden');
-        document.getElementById('mainApp').classList.remove('hidden');
-        document.getElementById('userName').textContent = this.user.user_name;
+        const authModal = this.getElement('authModal');
+        const mainApp = this.getElement('mainApp');
+        const userName = this.getElement('userName');
+
+        if (authModal) authModal.classList.add('hidden');
+        if (mainApp) mainApp.classList.remove('hidden');
+        if (userName && this.user) userName.textContent = this.user.user_name || '';
+
+        if (typeof this.applyAdminPrivileges === 'function') {
+            this.applyAdminPrivileges();
+        }
+    }
+
+    applyAdminPrivileges() {
+        const templatePanel = this.getElement('templateAdminPanel');
+        const exercisePanel = this.getElement('exerciseAdminPanel');
+        const isAdmin = !!this.user?.role && this.user.role === 'admin';
+
+        if (templatePanel) templatePanel.classList.toggle('hidden', !isAdmin);
+        if (exercisePanel) exercisePanel.classList.toggle('hidden', !isAdmin);
     }
 
 

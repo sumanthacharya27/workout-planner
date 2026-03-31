@@ -10,7 +10,7 @@ session_start();
     <link rel="stylesheet" href="public/styles.css">
 </head>
 <body>
-    <div id="app"></div>
+   
     
     <!-- Auth Modal -->
     <div id="authModal" class="modal hidden">
