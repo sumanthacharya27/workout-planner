@@ -89,37 +89,12 @@ session_start();
                 <h2>Workout Templates</h2>
                 <p class="page-description">Choose from professionally designed workout routines to get started quickly.</p>
 
-                <div id="templateAdminPanel" class="admin-panel hidden">
-                    <h3>Admin: Add New Template</h3>
-                    <div class="admin-grid">
-                        <input type="hidden" id="adminTemplateId" />
-                        <input id="adminTemplateName" placeholder="Template name" />
-                        <input id="adminTemplateCategory" placeholder="Category" />
-                        <input id="adminTemplateDifficulty" placeholder="Difficulty" />
-                        <input type="number" id="adminTemplateDuration" placeholder="Duration (min)" min="5" />
-                        <textarea id="adminTemplateDescription" placeholder="Description"></textarea>
-                        <button id="adminCreateTemplateBtn" class="btn btn-primary">Create Template</button>
-                    </div>
-                    <p class="admin-hint">Template exercises are added through the exercise page, then assigned by template update using API.</p>
-                </div>
-
                 <div id="templatesList" class="templates-list"></div>
             </section>
             
             <!-- Exercise Library Page -->
             <section id="libraryPage" class="page hidden">
                 <h2>Exercise Library</h2>
-                <div id="exerciseAdminPanel" class="admin-panel hidden">
-                    <h3>Admin: Add / Update Exercise</h3>
-                    <div class="admin-grid">
-                        <input type="hidden" id="adminExerciseId" />
-                        <input id="adminExerciseName" placeholder="Exercise name" />
-                        <input id="adminExerciseGroup" placeholder="Muscle group" />
-                        <input id="adminExerciseDifficulty" placeholder="Difficulty" />
-                        <input id="adminExerciseInstructions" placeholder="Instructions" />
-                        <button id="adminCreateExerciseBtn" class="btn btn-primary">Create Exercise</button>
-                    </div>
-                </div>
                 <div class="filters">
                     <select id="muscleFilter">
                         <option value="">All Muscle Groups</option>

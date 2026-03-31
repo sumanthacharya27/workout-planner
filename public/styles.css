@@ -481,30 +481,7 @@ html, body, #app {
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.admin-panel {
-    background: #f6f8ff;
-    border: 1px solid #e1e8ff;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 18px;
-}
 
-.admin-panel.hidden {
-    display: none;
-}
-
-.admin-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.admin-grid input,
-.admin-grid textarea,
-.admin-grid button {
-    width: 100%;
-    font-size: 14px;
-}
 
 .set-header {
     display: flex;

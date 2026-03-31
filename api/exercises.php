@@ -21,10 +21,6 @@ if ($method === 'GET') {
 }
 
 elseif ($method === 'POST') {
-    if (!$auth->isAdmin()) {
-        error("Admin privileges required", 403);
-    }
-
     $input = getJSONInput();
     if (!isset($input['name'], $input['muscle_group'], $input['difficulty'])) {
         error("Missing required fields", 400);
@@ -47,10 +43,6 @@ elseif ($method === 'POST') {
 }
 
 elseif ($method === 'PUT') {
-    if (!$auth->isAdmin()) {
-        error("Admin privileges required", 403);
-    }
-
     $input = getJSONInput();
     if (!isset($input['id'])) {
         error("Exercise ID required", 400);
@@ -79,10 +71,6 @@ elseif ($method === 'PUT') {
 }
 
 elseif ($method === 'DELETE') {
-    if (!$auth->isAdmin()) {
-        error("Admin privileges required", 403);
-    }
-
     $input = getJSONInput();
     if (!isset($input['id'])) {
         error("Exercise ID required", 400);

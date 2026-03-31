@@ -8,7 +8,6 @@ class App {
         this.currentWorkout = [];
         this.allExercises = [];
         this.templates = [];
-        this.isAdmin = false;
         this.execution = {
             workoutId: null,
             workout: null,
@@ -207,24 +206,9 @@ class App {
         document.getElementById('authModal').classList.add('hidden');
         document.getElementById('mainApp').classList.remove('hidden');
         document.getElementById('userName').textContent = this.user.user_name;
-        this.isAdmin = this.user.role === 'admin';
-        this.applyAdminPrivileges();
     }
 
-    applyAdminPrivileges() {
-        const templateAdminPanel = document.getElementById('templateAdminPanel');
-        const exerciseAdminPanel = document.getElementById('exerciseAdminPanel');
 
-        if (this.isAdmin) {
-            templateAdminPanel.classList.remove('hidden');
-            exerciseAdminPanel.classList.remove('hidden');
-            document.getElementById('adminCreateTemplateBtn').addEventListener('click', () => this.createTemplate());
-            document.getElementById('adminCreateExerciseBtn').addEventListener('click', () => this.createExercise());
-        } else {
-            templateAdminPanel.classList.add('hidden');
-            exerciseAdminPanel.classList.add('hidden');
-        }
-    }
 
     // ===== EXERCISES =====
     async loadExercises() {
@@ -315,25 +299,7 @@ class App {
                 </div>
                 <div class="exercise-muscle">${exercise.muscle_group}</div>
                 <div class="exercise-description">${exercise.description || 'No description'}</div>
-                ${this.isAdmin ? `
-                    <div class="exercise-actions">
-                        <button class="btn btn-secondary exercise-edit-btn" data-id="${exercise.id}">Edit</button>
-                        <button class="btn btn-danger exercise-delete-btn" data-id="${exercise.id}">Delete</button>
-                    </div>
-                ` : ''}
             `;
-
-            if (this.isAdmin) {
-                item.querySelector('.exercise-edit-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.editExercise(exercise);
-                });
-
-                item.querySelector('.exercise-delete-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.deleteExercise(exercise.id);
-                });
-            }
 
             list.appendChild(item);
         });
@@ -396,8 +362,6 @@ class App {
                         </div>
                         <div class="template-actions">
                             <button class="btn btn-primary template-use-btn">Use Template</button>
-                            ${this.isAdmin ? `<button class="btn btn-secondary template-edit-btn" data-id="${template.id}">Edit</button>
-                            <button class="btn btn-danger template-delete-btn" data-id="${template.id}">Delete</button>` : ''}
                         </div>
                     </div>
                 </div>
@@ -415,18 +379,6 @@ class App {
                 e.stopPropagation();
                 this.selectTemplate(template);
             });
-
-            if (this.isAdmin) {
-                item.querySelector('.template-edit-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.editTemplate(template);
-                });
-
-                item.querySelector('.template-delete-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.deleteTemplate(template.id);
-                });
-            }
             
             list.appendChild(item);
         });
@@ -447,51 +399,9 @@ class App {
         }
     }
 
-    async createExercise() {
-        const id = document.getElementById('adminExerciseId').value;
-        const name = document.getElementById('adminExerciseName').value.trim();
-        const muscle_group = document.getElementById('adminExerciseGroup').value.trim();
-        const difficulty = document.getElementById('adminExerciseDifficulty').value.trim();
-        const instructions = document.getElementById('adminExerciseInstructions').value.trim();
 
-        if (!name || !muscle_group || !difficulty) {
-            alert('Please complete required fields (name, group, difficulty).');
-            return;
-        }
 
-        const payload = { name, muscle_group, difficulty, instructions };
-        const method = id ? 'PUT' : 'POST';
-        if (id) payload.id = id;
 
-        const response = await fetch('api/exercises.php', {
-            method,
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            await this.loadExercises();
-            document.getElementById('adminExerciseId').value = '';
-            document.getElementById('adminExerciseName').value = '';
-            document.getElementById('adminExerciseGroup').value = '';
-            document.getElementById('adminExerciseDifficulty').value = '';
-            document.getElementById('adminExerciseInstructions').value = '';
-            alert(id ? 'Exercise updated successfully' : 'Exercise created successfully');
-        } else {
-            alert(data.message || 'Failed to save exercise');
-        }
-    }
-
-    editExercise(exercise) {
-        document.getElementById('adminExerciseId').value = exercise.id;
-        document.getElementById('adminExerciseName').value = exercise.name;
-        document.getElementById('adminExerciseGroup').value = exercise.muscle_group;
-        document.getElementById('adminExerciseDifficulty').value = exercise.difficulty;
-        document.getElementById('adminExerciseInstructions').value = exercise.instructions;
-        document.getElementById('adminCreateExerciseBtn').textContent = 'Save Exercise';
-    }
 
     async deleteExercise(id) {
         if (!confirm('Delete this exercise?')) return;
@@ -512,56 +422,9 @@ class App {
         }
     }
 
-    async createTemplate() {
-        const id = document.getElementById('adminTemplateId').value;
-        const name = document.getElementById('adminTemplateName').value.trim();
-        const category = document.getElementById('adminTemplateCategory').value.trim();
-        const difficulty = document.getElementById('adminTemplateDifficulty').value.trim();
-        const description = document.getElementById('adminTemplateDescription').value.trim();
-        const duration = Number(document.getElementById('adminTemplateDuration').value || 0);
 
-        if (!name || !category || !difficulty) {
-            alert('Please complete required fields: name, category, difficulty.');
-            return;
-        }
 
-        const payload = { name, category, difficulty, description, estimated_duration: duration };
-        const method = id ? 'PUT' : 'POST';
-        if (id) payload.id = id;
 
-        const response = await fetch('api/templates.php', {
-            method,
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-
-        const data = await response.json();
-        if (data.success) {
-            this.templates = data.data.templates;
-            this.displayTemplates();
-            document.getElementById('adminTemplateId').value = '';
-            document.getElementById('adminTemplateName').value = '';
-            document.getElementById('adminTemplateCategory').value = '';
-            document.getElementById('adminTemplateDifficulty').value = '';
-            document.getElementById('adminTemplateDescription').value = '';
-            document.getElementById('adminTemplateDuration').value = '';
-            document.getElementById('adminCreateTemplateBtn').textContent = 'Create Template';
-            alert(id ? 'Template updated successfully' : 'Template created successfully');
-        } else {
-            alert(data.message || 'Failed to create template');
-        }
-    }
-
-    editTemplate(template) {
-        document.getElementById('adminTemplateId').value = template.id;
-        document.getElementById('adminTemplateName').value = template.name;
-        document.getElementById('adminTemplateCategory').value = template.category;
-        document.getElementById('adminTemplateDifficulty').value = template.difficulty;
-        document.getElementById('adminTemplateDescription').value = template.description || '';
-        document.getElementById('adminTemplateDuration').value = template.estimated_duration || '';
-        document.getElementById('adminCreateTemplateBtn').textContent = 'Save Template';
-    }
 
     async deleteTemplate(id) {
         if (!confirm('Delete this template?')) return;
