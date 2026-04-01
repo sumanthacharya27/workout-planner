@@ -13,6 +13,13 @@ class Auth {
     }
     
 public function register($email, $password, $name) {
+        $email = trim($email);
+        $name = trim($name);
+
+        if ($email === '' || $password === '' || $name === '') {
+            return ['success' => false, 'message' => 'All fields are required'];
+        }
+
         $email = $this->db->real_escape_string($email);
         $name = $this->db->real_escape_string($name);
         
@@ -35,6 +42,12 @@ public function register($email, $password, $name) {
     }
 
     public function login($email, $password) {
+        $email = trim($email);
+
+        if ($email === '' || $password === '') {
+            return ['success' => false, 'message' => 'Email and password are required'];
+        }
+
         $email = $this->db->real_escape_string($email);
         $result = $this->db->query("SELECT id, password, name FROM users WHERE email = '$email'");
         
@@ -43,15 +56,25 @@ public function register($email, $password, $name) {
         }
         
         $user = $result->fetch_assoc();
-        
-        if (password_verify($password, $user['password'])) {
+        $storedPassword = $user['password'];
+
+        // Support legacy plain-text passwords and transparently upgrade them to bcrypt.
+        $validPassword = password_verify($password, $storedPassword) || hash_equals($storedPassword, $password);
+
+        if ($validPassword) {
+            if (!password_get_info($storedPassword)['algo']) {
+                $newHash = password_hash($password, PASSWORD_BCRYPT);
+                $safeHash = $this->db->real_escape_string($newHash);
+                $this->db->query("UPDATE users SET password = '$safeHash' WHERE id = {$user['id']}");
+            }
+
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_email'] = $email;
             return ['success' => true, 'message' => 'Login successful'];
-        } else {
-            return ['success' => false, 'message' => 'Invalid credentials'];
         }
+
+        return ['success' => false, 'message' => 'Invalid credentials'];
     }
 
     public function logout() {
