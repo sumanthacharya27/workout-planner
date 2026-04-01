@@ -91,18 +91,42 @@ class App {
         document.getElementById('repPlus').addEventListener('click', () => this.adjustReps(1));
         document.getElementById('completeSetBtn').addEventListener('click', () => this.completeCurrentSet());
     }
+
+    async apiRequest(url, options = {}) {
+        const config = {
+            credentials: 'same-origin',
+            ...options
+        };
+
+        if (config.body && !config.headers) {
+            config.headers = { 'Content-Type': 'application/json' };
+        }
+
+        try {
+            const response = await fetch(url, config);
+            const raw = await response.text();
+            let parsed;
+
+            try {
+                parsed = raw ? JSON.parse(raw) : {};
+            } catch (parseError) {
+                return { success: false, data: {}, message: 'Invalid server response' };
+            }
+
+            if (typeof parsed.success !== 'boolean') {
+                return { success: false, data: {}, message: 'Unexpected API response format' };
+            }
+
+            return parsed;
+        } catch (error) {
+            return { success: false, data: {}, message: 'Network error. Please try again.' };
+        }
+    }
     
     // ===== AUTH =====
     async checkAuthStatus() {
         try {
-            const response = await fetch('api/auth.php', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'status' })
-            });
-            
-            const data = await response.json();
+            const data = await this.apiRequest('api/status.php');
             if (data.success) {
                 this.user = data.data;
                 this.showApp();
@@ -120,14 +144,10 @@ class App {
     
     async login(email, password, form) {
         try {
-            const response = await fetch('api/auth.php', {
+            const data = await this.apiRequest('api/login.php', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'login', email, password })
+                body: JSON.stringify({ email, password })
             });
-            
-            const data = await response.json();
             const message = form.querySelector('.form-message');
             
             if (data.success) {
@@ -153,14 +173,10 @@ class App {
     
     async register(name, email, password, form) {
         try {
-            const response = await fetch('api/auth.php', {
+            const data = await this.apiRequest('api/register.php', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'register', name, email, password })
+                body: JSON.stringify({ name, email, password })
             });
-            
-            const data = await response.json();
             const message = form.querySelector('.form-message');
             
             if (data.success) {
@@ -183,11 +199,9 @@ class App {
     
     async logout() {
         try {
-            await fetch('api/auth.php', {
+            await this.apiRequest('api/logout.php', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'logout' })
+                body: JSON.stringify({})
             });
             
             this.user = null;
@@ -236,8 +250,7 @@ class App {
     // ===== EXERCISES =====
     async loadExercises() {
         try {
-            const response = await fetch('api/exercises.php', { credentials: 'same-origin' });
-            const data = await response.json();
+            const data = await this.apiRequest('api/exercises.php');
             
             if (data.success) {
                 this.allExercises = data.data.exercises;
@@ -252,8 +265,7 @@ class App {
     
     async loadTemplates() {
         try {
-            const response = await fetch('api/templates.php', { credentials: 'same-origin' });
-            const data = await response.json();
+            const data = await this.apiRequest('api/templates.php');
             
             if (data.success) {
                 this.templates = data.data.templates;
@@ -429,14 +441,10 @@ class App {
     async deleteExercise(id) {
         if (!confirm('Delete this exercise?')) return;
 
-        const response = await fetch('api/exercises.php', {
+        const data = await this.apiRequest('api/exercises.php', {
             method: 'DELETE',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id })
         });
-
-        const data = await response.json();
         if (data.success) {
             await this.loadExercises();
             alert('Exercise deleted');
@@ -452,14 +460,10 @@ class App {
     async deleteTemplate(id) {
         if (!confirm('Delete this template?')) return;
 
-        const response = await fetch('api/templates.php', {
+        const data = await this.apiRequest('api/templates.php', {
             method: 'DELETE',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id })
         });
-
-        const data = await response.json();
         if (data.success) {
             this.templates = data.data.templates;
             this.displayTemplates();
@@ -644,9 +648,8 @@ class App {
         }
         
         try {
-            const response = await fetch('api/workouts.php', {
+            const data = await this.apiRequest('api/workouts.php', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'create',
                     name,
@@ -654,8 +657,6 @@ class App {
                     exercises: this.currentWorkout
                 })
             });
-            
-            const data = await response.json();
             
             if (data.success) {
                 alert('Workout saved successfully!');
@@ -679,14 +680,10 @@ class App {
     // ===== WORKOUTS =====
     async loadUserWorkouts() {
         try {
-            const response = await fetch('api/workouts.php', {
+            const data = await this.apiRequest('api/workouts.php', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'get' })
+                body: JSON.stringify({ action: 'get' }) // kept for compatibility
             });
-            
-            const data = await response.json();
             
             if (data.success) {
                 this.workouts = data.data.workouts;
@@ -730,13 +727,10 @@ class App {
     
     async loadWorkoutHistory() {
         try {
-            const response = await fetch('api/workouts.php', {
+            const data = await this.apiRequest('api/workouts.php', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'get_history' })
             });
-            const data = await response.json();
 
             if (data.success) {
                 this.workoutHistory = data.data.history;
@@ -773,14 +767,11 @@ class App {
 
     async startWorkout(workoutId) {
         try {
-            const response = await fetch('api/workouts.php', {
+            const data = await this.apiRequest('api/workouts.php', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'get_detail', workout_id: workoutId })
             });
 
-            const data = await response.json();
             if (data.success) {
                 this.execution.workout = data.data.workout;
                 this.execution.workoutId = workoutId;
@@ -1000,10 +991,8 @@ class App {
         const durationMinutes = Math.max(1, Math.ceil(this.execution.elapsedSeconds / 60));
 
         try {
-            const response = await fetch('api/workouts.php', {
+            const data = await this.apiRequest('api/workouts.php', {
                 method: 'POST',
-                credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'complete',
                     workout_id: this.execution.workoutId,
@@ -1012,7 +1001,6 @@ class App {
                     execution_data: this.execution.setProgress
                 })
             });
-            const data = await response.json();
             
             if (data.success) {
                 alert('Workout complete! History saved.');

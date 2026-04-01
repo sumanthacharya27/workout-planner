@@ -4,124 +4,112 @@ require_once '../includes/response.php';
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 
-if (!$auth->isLoggedIn()) {
-    error("Not authenticated", 401);
+function requireAuth(Auth $auth): int {
+    if (!$auth->isLoggedIn()) {
+        errorResponse('Not authenticated', 401);
+    }
+    return (int)$auth->getCurrentUserId();
 }
 
-validateRequest('POST');
-$input = getJSONInput();
+try {
+    $userId = requireAuth($auth);
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-$action = $input['action'] ?? null;
-$user_id = $auth->getCurrentUserId();
-
-if ($action === 'create') {
-    if (!isset($input['name'], $input['exercises'])) {
-        error("Missing required fields", 400);
+    if ($method === 'GET') {
+        $stmt = $db->prepare('SELECT id, name, description, created_at FROM custom_workouts WHERE user_id = ? ORDER BY created_at DESC');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $workouts = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        success('Workouts fetched', ['workouts' => $workouts]);
     }
-    
-    $name = $db->escape($input['name']);
-    $description = $db->escape($input['description'] ?? '');
-    
-    $sql = "INSERT INTO custom_workouts (user_id, name, description) VALUES ($user_id, '$name', '$description')";
-    if ($db->query($sql)) {
-        $workout_id = $db->lastInsertId();
-        
-        // Add exercises to workout
-        foreach ($input['exercises'] as $ex) {
-            $exercise_id = (int)$ex['exercise_id'];
-            $sets = (int)($ex['sets'] ?? 3);
-            $reps = (int)($ex['reps'] ?? 10);
-            $rest = (int)($ex['rest_seconds'] ?? 60);
-            
-            $sql = "INSERT INTO workout_exercises (workout_id, exercise_id, sets, reps, rest_seconds) 
-                    VALUES ($workout_id, $exercise_id, $sets, $reps, $rest)";
-            $db->query($sql);
+
+    if ($method !== 'POST') {
+        errorResponse('Method not allowed', 405);
+    }
+
+    $input = getJSONInput();
+    $action = sanitizeText($input['action'] ?? '', 30);
+
+    if ($action === 'create') {
+        requireFields($input, ['name', 'exercises']);
+        if (!is_array($input['exercises']) || count($input['exercises']) === 0) {
+            errorResponse('At least one exercise is required', 422);
         }
-        
-        success("Workout created", ['workout_id' => $workout_id]);
-    } else {
-        error("Failed to create workout", 500);
-    }
-}
-elseif ($action === 'get') {
-    $result = $db->query("SELECT * FROM custom_workouts WHERE user_id = $user_id ORDER BY created_at DESC");
-    $workouts = [];
-    
-    while ($row = $result->fetch_assoc()) {
-        $workouts[] = $row;
-    }
-    
-    success("Workouts fetched", ['workouts' => $workouts]);
-}
-elseif ($action === 'get_detail') {
-    $workout_id = (int)($input['workout_id'] ?? 0);
-    
-    $result = $db->query("SELECT * FROM custom_workouts WHERE id = $workout_id AND user_id = $user_id");
-    if ($result->num_rows === 0) {
-        error("Workout not found", 404);
-    }
-    
-    $workout = $result->fetch_assoc();
-    
-    $exercises_result = $db->query("
-        SELECT we.*, e.name, e.description, e.muscle_group, e.difficulty 
-        FROM workout_exercises we 
-        JOIN exercises e ON we.exercise_id = e.id 
-        WHERE we.workout_id = $workout_id
-    ");
-    
-    $exercises = [];
-    while ($row = $exercises_result->fetch_assoc()) {
-        $exercises[] = $row;
-    }
-    
-    $workout['exercises'] = $exercises;
-    success("Workout details fetched", ['workout' => $workout]);
-}
-elseif ($action === 'get_history') {
-    $result = $db->query("SELECT wh.*, cw.name AS workout_name FROM workout_history wh JOIN custom_workouts cw ON wh.workout_id=cw.id WHERE wh.user_id = $user_id ORDER BY completed_at DESC");
-    $history = [];
-    while ($row = $result->fetch_assoc()) {
-        $history[] = $row;
-    }
-    success("History fetched", ['history' => $history]);
-}
-elseif ($action === 'complete') {
-    $workout_id = (int)($input['workout_id'] ?? 0);
-    $duration = (int)($input['duration_minutes'] ?? 0);
-    $notes = $db->escape($input['notes'] ?? '');
-    $execution_data = $input['execution_data'] ?? [];
 
-    // validate workout ownership
-    $check = $db->query("SELECT id FROM custom_workouts WHERE id = $workout_id AND user_id = $user_id");
-    if ($check->num_rows === 0) {
-        error("Workout not found", 404);
-    }
+        $name = sanitizeText($input['name'], 150);
+        $description = sanitizeText($input['description'] ?? '', 2000);
 
-    $sql = "INSERT INTO workout_history (user_id, workout_id, completed_at, duration_minutes, notes) VALUES ($user_id, $workout_id, NOW(), $duration, '$notes')";
-    if ($db->query($sql)) {
-        $history_id = $db->lastInsertId();
-        
-        // Save detailed execution data if provided
-        if (!empty($execution_data)) {
-            foreach ($execution_data as $exercise_index => $sets) {
-                foreach ($sets as $set_index => $set_data) {
-                    if ($set_data['completed']) {
-                        $reps = (int)($set_data['reps'] ?? 0);
-                        $set_notes = $db->escape($set_data['notes'] ?? '');
-                        
-                        // You could add a workout_execution_details table here for detailed tracking
-                        // For now, we'll just log the completion
-                    }
-                }
+        $stmt = $db->prepare('INSERT INTO custom_workouts (user_id, name, description) VALUES (?, ?, ?)');
+        $stmt->bind_param('iss', $userId, $name, $description);
+        $stmt->execute();
+        $workoutId = $db->lastInsertId();
+
+        $insertExercise = $db->prepare('INSERT INTO workout_exercises (workout_id, exercise_id, sets, reps, rest_seconds) VALUES (?, ?, ?, ?, ?)');
+        foreach ($input['exercises'] as $exercise) {
+            $exerciseId = (int)($exercise['exercise_id'] ?? 0);
+            $sets = max(1, min(20, (int)($exercise['sets'] ?? 3)));
+            $reps = max(1, min(100, (int)($exercise['reps'] ?? 10)));
+            $rest = max(0, min(600, (int)($exercise['rest_seconds'] ?? 60)));
+            if ($exerciseId <= 0) {
+                continue;
             }
+            $insertExercise->bind_param('iiiii', $workoutId, $exerciseId, $sets, $reps, $rest);
+            $insertExercise->execute();
         }
-        
-        success("Workout completed and logged", ['history_id' => $history_id]);
-    } else {
-        error("Failed to log workout history", 500);
+
+        success('Workout created', ['workout_id' => $workoutId]);
     }
-}
-else {
-    error("Unknown action", 400);
+
+    if ($action === 'get_detail') {
+        $workoutId = (int)($input['workout_id'] ?? 0);
+        if ($workoutId <= 0) {
+            errorResponse('Invalid workout id', 422);
+        }
+
+        $stmt = $db->prepare('SELECT id, name, description, created_at FROM custom_workouts WHERE id = ? AND user_id = ? LIMIT 1');
+        $stmt->bind_param('ii', $workoutId, $userId);
+        $stmt->execute();
+        $workout = $stmt->get_result()->fetch_assoc();
+        if (!$workout) {
+            errorResponse('Workout not found', 404);
+        }
+
+        $exStmt = $db->prepare('SELECT we.*, e.name, e.description, e.muscle_group, e.difficulty FROM workout_exercises we JOIN exercises e ON we.exercise_id = e.id WHERE we.workout_id = ? ORDER BY we.id');
+        $exStmt->bind_param('i', $workoutId);
+        $exStmt->execute();
+        $workout['exercises'] = $exStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        success('Workout details fetched', ['workout' => $workout]);
+    }
+
+    if ($action === 'get_history') {
+        $stmt = $db->prepare('SELECT wh.*, cw.name AS workout_name FROM workout_history wh JOIN custom_workouts cw ON wh.workout_id = cw.id WHERE wh.user_id = ? ORDER BY completed_at DESC');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $history = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        success('History fetched', ['history' => $history]);
+    }
+
+    if ($action === 'complete') {
+        $workoutId = (int)($input['workout_id'] ?? 0);
+        $duration = max(1, min(1440, (int)($input['duration_minutes'] ?? 1)));
+        $notes = sanitizeText($input['notes'] ?? '', 2000);
+
+        $check = $db->prepare('SELECT id FROM custom_workouts WHERE id = ? AND user_id = ? LIMIT 1');
+        $check->bind_param('ii', $workoutId, $userId);
+        $check->execute();
+        if (!$check->get_result()->fetch_assoc()) {
+            errorResponse('Workout not found', 404);
+        }
+
+        $stmt = $db->prepare('INSERT INTO workout_history (user_id, workout_id, completed_at, duration_minutes, notes) VALUES (?, ?, NOW(), ?, ?)');
+        $stmt->bind_param('iiis', $userId, $workoutId, $duration, $notes);
+        $stmt->execute();
+
+        success('Workout completed and logged', ['history_id' => $db->lastInsertId()]);
+    }
+
+    errorResponse('Unknown action', 400);
+} catch (Throwable $e) {
+    errorResponse('Server error', 500);
 }

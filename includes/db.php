@@ -2,46 +2,29 @@
 require_once 'config.php';
 
 class Database {
-    private $conn;
-    
+    private mysqli $conn;
+
     public function __construct() {
-        try {
-            $this->conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
-            
-            if ($this->conn->connect_error) {
-                throw new Exception("Connection failed: " . $this->conn->connect_error);
-            }
-            
-            $this->conn->set_charset("utf8mb4");
-        } catch (Exception $e) {
-            die("Database Error: " . $e->getMessage());
-        }
+        mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+        $this->conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT);
+        $this->conn->set_charset('utf8mb4');
     }
-    
-    public function getConnection() {
+
+    public function getConnection(): mysqli {
         return $this->conn;
     }
-    
-    public function query($sql) {
-        return $this->conn->query($sql);
-    }
-    
-    public function prepare($sql) {
+
+    public function prepare(string $sql): mysqli_stmt {
         return $this->conn->prepare($sql);
     }
-    
-    public function escape($string) {
-        return $this->conn->real_escape_string($string);
+
+    public function query(string $sql): mysqli_result|bool {
+        return $this->conn->query($sql);
     }
-    
-    public function lastInsertId() {
-        return $this->conn->insert_id;
-    }
-    
-    public function close() {
-        $this->conn->close();
+
+    public function lastInsertId(): int {
+        return (int)$this->conn->insert_id;
     }
 }
 
-// Global database instance
 $db = new Database();
