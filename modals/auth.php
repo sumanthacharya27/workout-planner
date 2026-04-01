@@ -18,9 +18,9 @@
         <!-- Register Form -->
         <form id="registerForm" class="form-section">
             <h2>Create Account</h2>
-            <input type="text" placeholder="Full Name" required>
-            <input type="email" placeholder="Email" required>
-            <input type="password" placeholder="Password" required>
+            <input type="text" id="regName" placeholder="Full Name" required>
+            <input type="email" id="regEmail" placeholder="Email" required>
+            <input type="password" id="regPass" placeholder="Password" required>
             <button type="submit" class="btn btn-primary">Register</button>
             <p class="form-message"></p>
         </form>

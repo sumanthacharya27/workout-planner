@@ -56,9 +56,9 @@ class App {
         // Register form
         document.getElementById('registerForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const name = e.target.querySelectorAll('input')[0].value;
-            const email = e.target.querySelectorAll('input')[1].value;
-            const password = e.target.querySelectorAll('input')[2].value;
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPass').value;
             this.register(name, email, password, e.target);
         });
         
@@ -172,10 +172,21 @@ class App {
     }
     
     async register(name, email, password, form) {
+        console.log('--- REGISTER ATTEMPT ---');
+        console.log('Sending name:', name);
+        console.log('Sending email:', email);
+        console.log('Sending password length:', password?.length);
+
         try {
+            const formData = new URLSearchParams();
+            formData.append('name', name);
+            formData.append('email', email);
+            formData.append('password', password);
+
             const data = await this.apiRequest('api/register.php', {
                 method: 'POST',
-                body: JSON.stringify({ name, email, password })
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
             });
             const message = form.querySelector('.form-message');
             
