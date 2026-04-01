@@ -4,151 +4,153 @@ require_once '../includes/response.php';
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 
-$method = $_SERVER['REQUEST_METHOD'];
+function fetchAllTemplates(Database $db): array {
+    $stmt = $db->prepare('SELECT * FROM workout_templates ORDER BY category, name');
+    $stmt->execute();
+    $templates = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-function fetchAllTemplates($db) {
-    $result = $db->query("SELECT * FROM workout_templates ORDER BY category, name");
-    if (!$result) {
-        error("Failed to fetch templates", 500);
-    }
+    $exerciseStmt = $db->prepare('SELECT te.*, e.name, e.description, e.muscle_group, e.difficulty, e.instructions FROM template_exercises te JOIN exercises e ON te.exercise_id = e.id WHERE te.template_id = ? ORDER BY te.set_group, te.set_order');
 
-    $templates = [];
-    while ($row = $result->fetch_assoc()) {
-        $template_id = $row['id'];
+    foreach ($templates as &$template) {
+        $templateId = (int)$template['id'];
+        $exerciseStmt->bind_param('i', $templateId);
+        $exerciseStmt->execute();
+        $rows = $exerciseStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-        $exercises_result = $db->query("
-            SELECT te.*, e.name, e.description, e.muscle_group, e.difficulty, e.instructions
-            FROM template_exercises te
-            JOIN exercises e ON te.exercise_id = e.id
-            WHERE te.template_id = $template_id
-            ORDER BY te.set_group, te.set_order
-        ");
-
-        $exercises = [];
-        while ($ex_row = $exercises_result->fetch_assoc()) {
-            $set_group = $ex_row['set_group'];
-            if (!isset($exercises[$set_group])) {
-                $exercises[$set_group] = [];
+        $sets = [];
+        foreach ($rows as $row) {
+            $group = (string)$row['set_group'];
+            if (!isset($sets[$group])) {
+                $sets[$group] = [];
             }
-            $exercises[$set_group][] = $ex_row;
+            $sets[$group][] = $row;
         }
 
-        $row['exercise_sets'] = $exercises;
-        $row['exercises'] = empty($exercises) ? [] : array_merge(...array_values($exercises));
-        $templates[] = $row;
+        $template['exercise_sets'] = $sets;
+        $template['exercises'] = $rows;
     }
 
     return $templates;
 }
 
-if ($method === 'GET') {
-    success("Templates fetched", ['templates' => fetchAllTemplates($db)]);
-}
-
-elseif ($method === 'POST') {
-    $input = getJSONInput();
-    if (!isset($input['name'], $input['category'], $input['difficulty'])) {
-        error("Missing required fields", 400);
+try {
+    if (!$auth->isLoggedIn()) {
+        errorResponse('Not authenticated', 401);
     }
 
-    $name = $db->escape($input['name']);
-    $description = $db->escape($input['description'] ?? '');
-    $category = $db->escape($input['category']);
-    $difficulty = $db->escape($input['difficulty']);
-    $estimated_duration = isset($input['estimated_duration']) ? (int)$input['estimated_duration'] : null;
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-    $durationClause = $estimated_duration ? ", estimated_duration = $estimated_duration" : "";
-    $sql = "INSERT INTO workout_templates (name, description, category, difficulty" .
-           ($estimated_duration ? ", estimated_duration" : "") . ") VALUES ('{$name}', '{$description}', '{$category}', '{$difficulty}'" .
-           ($estimated_duration ? ", $estimated_duration" : "") . ")";
-
-    if (!$db->query($sql)) {
-        error("Failed to create template", 500);
+    if ($method === 'GET') {
+        success('Templates fetched', ['templates' => fetchAllTemplates($db)]);
     }
 
-    $templateId = $db->lastInsertId();
+    if ($method === 'POST') {
+        $input = getJSONInput();
+        requireFields($input, ['name', 'category', 'difficulty']);
 
-    if (!empty($input['exercises']) && is_array($input['exercises'])) {
-        foreach ($input['exercises'] as $ex) {
-            if (!isset($ex['exercise_id'])) continue;
-            $exerciseId = (int)$ex['exercise_id'];
-            $sets = isset($ex['sets']) ? (int)$ex['sets'] : 3;
-            $reps = isset($ex['reps']) ? (int)$ex['reps'] : 10;
-            $rest_seconds = isset($ex['rest_seconds']) ? (int)$ex['rest_seconds'] : 60;
-            $day_order = isset($ex['day_order']) ? (int)$ex['day_order'] : 1;
-            $set_group = isset($ex['set_group']) ? (int)$ex['set_group'] : 1;
-            $set_order = isset($ex['set_order']) ? (int)$ex['set_order'] : 1;
+        $name = sanitizeText($input['name'], 150);
+        $description = sanitizeText($input['description'] ?? '', 2000);
+        $category = sanitizeText($input['category'], 50);
+        $difficulty = sanitizeText($input['difficulty'], 20);
+        $estimatedDuration = isset($input['estimated_duration']) ? max(1, min(500, (int)$input['estimated_duration'])) : null;
 
-            $sqlEx = "INSERT INTO template_exercises (template_id, exercise_id, sets, reps, rest_seconds, day_order, set_group, set_order) VALUES ($templateId, $exerciseId, $sets, $reps, $rest_seconds, $day_order, $set_group, $set_order)";
-            $db->query($sqlEx);
+        $stmt = $db->prepare('INSERT INTO workout_templates (name, description, category, difficulty, estimated_duration) VALUES (?, ?, ?, ?, ?)');
+        $stmt->bind_param('ssssi', $name, $description, $category, $difficulty, $estimatedDuration);
+        $stmt->execute();
+        $templateId = $db->lastInsertId();
+
+        if (!empty($input['exercises']) && is_array($input['exercises'])) {
+            $insertEx = $db->prepare('INSERT INTO template_exercises (template_id, exercise_id, sets, reps, rest_seconds, day_order, set_group, set_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            foreach ($input['exercises'] as $ex) {
+                $exerciseId = (int)($ex['exercise_id'] ?? 0);
+                if ($exerciseId <= 0) continue;
+                $sets = max(1, min(20, (int)($ex['sets'] ?? 3)));
+                $reps = max(1, min(100, (int)($ex['reps'] ?? 10)));
+                $rest = max(0, min(600, (int)($ex['rest_seconds'] ?? 60)));
+                $dayOrder = max(1, (int)($ex['day_order'] ?? 1));
+                $setGroup = max(1, (int)($ex['set_group'] ?? 1));
+                $setOrder = max(1, (int)($ex['set_order'] ?? 1));
+                $insertEx->bind_param('iiiiiiii', $templateId, $exerciseId, $sets, $reps, $rest, $dayOrder, $setGroup, $setOrder);
+                $insertEx->execute();
+            }
         }
+
+        success('Template created', ['template_id' => $templateId, 'templates' => fetchAllTemplates($db)]);
     }
 
-    success("Template created", ['template_id' => $templateId, 'templates' => fetchAllTemplates($db)]);
-}
-
-elseif ($method === 'PUT') {
-    $input = getJSONInput();
-    if (!isset($input['id'])) {
-        error("Template ID required", 400);
-    }
-
-    $templateId = (int)$input['id'];
-    $updates = [];
-
-    foreach (['name', 'description', 'category', 'difficulty'] as $field) {
-        if (isset($input[$field])) {
-            $updates[] = "$field = '" . $db->escape($input[$field]) . "'";
+    if ($method === 'PUT') {
+        $input = getJSONInput();
+        $templateId = (int)($input['id'] ?? 0);
+        if ($templateId <= 0) {
+            errorResponse('Template ID required', 422);
         }
-    }
-    if (isset($input['estimated_duration'])) {
-        $updates[] = "estimated_duration = " . (int)$input['estimated_duration'];
-    }
 
-    if (!empty($updates)) {
-        $sql = "UPDATE workout_templates SET " . implode(', ', $updates) . " WHERE id = $templateId";
-        if (!$db->query($sql)) {
-            error("Failed to update template", 500);
+        $updates = [];
+        $params = [];
+        $types = '';
+        foreach (['name' => 150, 'description' => 2000, 'category' => 50, 'difficulty' => 20] as $field => $len) {
+            if (array_key_exists($field, $input)) {
+                $updates[] = "$field = ?";
+                $params[] = sanitizeText($input[$field], $len);
+                $types .= 's';
+            }
         }
-    }
-
-    if (isset($input['exercises']) && is_array($input['exercises'])) {
-        // delete old and insert new to keep it simple
-        $db->query("DELETE FROM template_exercises WHERE template_id = $templateId");
-        foreach ($input['exercises'] as $ex) {
-            if (!isset($ex['exercise_id'])) continue;
-            $exerciseId = (int)$ex['exercise_id'];
-            $sets = isset($ex['sets']) ? (int)$ex['sets'] : 3;
-            $reps = isset($ex['reps']) ? (int)$ex['reps'] : 10;
-            $rest_seconds = isset($ex['rest_seconds']) ? (int)$ex['rest_seconds'] : 60;
-            $day_order = isset($ex['day_order']) ? (int)$ex['day_order'] : 1;
-            $set_group = isset($ex['set_group']) ? (int)$ex['set_group'] : 1;
-            $set_order = isset($ex['set_order']) ? (int)$ex['set_order'] : 1;
-
-            $sqlEx = "INSERT INTO template_exercises (template_id, exercise_id, sets, reps, rest_seconds, day_order, set_group, set_order) VALUES ($templateId, $exerciseId, $sets, $reps, $rest_seconds, $day_order, $set_group, $set_order)";
-            $db->query($sqlEx);
+        if (array_key_exists('estimated_duration', $input)) {
+            $updates[] = 'estimated_duration = ?';
+            $params[] = max(1, min(500, (int)$input['estimated_duration']));
+            $types .= 'i';
         }
+
+        if (!empty($updates)) {
+            $types .= 'i';
+            $params[] = $templateId;
+            $stmt = $db->prepare('UPDATE workout_templates SET ' . implode(', ', $updates) . ' WHERE id = ?');
+            $stmt->bind_param($types, ...$params);
+            $stmt->execute();
+        }
+
+        if (isset($input['exercises']) && is_array($input['exercises'])) {
+            $del = $db->prepare('DELETE FROM template_exercises WHERE template_id = ?');
+            $del->bind_param('i', $templateId);
+            $del->execute();
+
+            $insertEx = $db->prepare('INSERT INTO template_exercises (template_id, exercise_id, sets, reps, rest_seconds, day_order, set_group, set_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            foreach ($input['exercises'] as $ex) {
+                $exerciseId = (int)($ex['exercise_id'] ?? 0);
+                if ($exerciseId <= 0) continue;
+                $sets = max(1, min(20, (int)($ex['sets'] ?? 3)));
+                $reps = max(1, min(100, (int)($ex['reps'] ?? 10)));
+                $rest = max(0, min(600, (int)($ex['rest_seconds'] ?? 60)));
+                $dayOrder = max(1, (int)($ex['day_order'] ?? 1));
+                $setGroup = max(1, (int)($ex['set_group'] ?? 1));
+                $setOrder = max(1, (int)($ex['set_order'] ?? 1));
+                $insertEx->bind_param('iiiiiiii', $templateId, $exerciseId, $sets, $reps, $rest, $dayOrder, $setGroup, $setOrder);
+                $insertEx->execute();
+            }
+        }
+
+        success('Template updated', ['template_id' => $templateId, 'templates' => fetchAllTemplates($db)]);
     }
 
-    success("Template updated", ['template_id' => $templateId, 'templates' => fetchAllTemplates($db)]);
-}
+    if ($method === 'DELETE') {
+        $input = getJSONInput();
+        $templateId = (int)($input['id'] ?? 0);
+        if ($templateId <= 0) {
+            errorResponse('Template ID required', 422);
+        }
 
-elseif ($method === 'DELETE') {
-    $input = getJSONInput();
-    if (!isset($input['id'])) {
-        error("Template ID required", 400);
+        $delEx = $db->prepare('DELETE FROM template_exercises WHERE template_id = ?');
+        $delEx->bind_param('i', $templateId);
+        $delEx->execute();
+
+        $delTemplate = $db->prepare('DELETE FROM workout_templates WHERE id = ?');
+        $delTemplate->bind_param('i', $templateId);
+        $delTemplate->execute();
+
+        success('Template deleted', ['template_id' => $templateId, 'templates' => fetchAllTemplates($db)]);
     }
 
-    $templateId = (int)$input['id'];
-    $db->query("DELETE FROM template_exercises WHERE template_id = $templateId");
-    if (!$db->query("DELETE FROM workout_templates WHERE id = $templateId")) {
-        error("Failed to delete template", 500);
-    }
-
-    success("Template deleted", ['template_id' => $templateId, 'templates' => fetchAllTemplates($db)]);
+    errorResponse('Method not allowed', 405);
+} catch (Throwable $e) {
+    errorResponse('Server error', 500);
 }
-
-else {
-    error("Method not allowed", 405);
-}
-
