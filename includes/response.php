@@ -1,3 +1,4 @@
+<!-- includes/response.php -->
 <?php
 
 function sendJSON(array $payload, int $statusCode = 200): void {

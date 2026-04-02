@@ -1,4 +1,5 @@
 // GymPlanner Pro - Main Application
+// public/app.js:
 class App {
     constructor() {
         this.user = null;
