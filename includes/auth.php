@@ -1,5 +1,5 @@
 <?php
-require_once 'db.php';
+require_once __DIR__ . '/db.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_strict_mode', '1');
@@ -41,7 +41,11 @@ class Auth {
         $stmt->bind_param('sss', $email, $hash, $name);
         $stmt->execute();
 
-        return ['success' => true, 'message' => 'Registration successful', 'user_id' => (int)$this->db->insert_id];
+        return [
+            'success' => true,
+            'message' => 'Registration successful',
+            'data' => ['user_id' => (int)$this->db->insert_id]
+        ];
     }
 
     public function login(string $email, string $password): array {
@@ -68,7 +72,14 @@ class Auth {
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['last_activity'] = time();
 
-        return ['success' => true, 'message' => 'Login successful'];
+        return [
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => [
+                'user_id' => (int)$user['id'],
+                'user_name' => $user['name']
+            ]
+        ];
     }
 
     public function logout(): array {
