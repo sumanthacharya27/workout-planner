@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>THE KINETIC EDITORIAL — Auth</title>
 
-  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <link rel="stylesheet" href="<?php echo (basename($_SERVER['PHP_SELF']) === 'auth.php' ? '../' : ''); ?>public/tailwind.css" />
   <link href="https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,700;0,800;0,900;1,700;1,800;1,900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
 
@@ -487,10 +487,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
 <script>
   /**
    * AUTH_ENDPOINT — points back to this same file.
-   * When this file is at modals/auth.php, the endpoint is just 'auth.php'.
-   * If you serve the login page from the project root, change to 'modals/auth.php'.
    */
-  const AUTH_ENDPOINT = 'modals/auth.php';
+  const AUTH_ENDPOINT = window.location.pathname.endsWith('index.php') || window.location.pathname.endsWith('/') || !window.location.pathname.includes('modals/')
+    ? 'modals/auth.php' 
+    : 'auth.php';
 
   // ── Tab switching ───────────────────────────────────────────────
   let currentTab = 'login';
@@ -695,6 +695,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
 
   // ── Check session on page load ────────────────────────────────────
   (async () => {
+    // If we're inside index.php, our main app.js handles auth check
+    if (window.location.pathname.endsWith('index.php') || window.location.pathname.endsWith('/')) {
+      console.log('Skipping standalone auth check in index.php');
+      return;
+    }
+    
     try {
       const res = await fetch(`${AUTH_ENDPOINT}?action=check`, { credentials: 'same-origin' });
       const d   = await res.json();
