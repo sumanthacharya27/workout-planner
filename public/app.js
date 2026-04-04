@@ -127,7 +127,7 @@ class App {
     // ===== AUTH =====
     async checkAuthStatus() {
         try {
-            const data = await this.apiRequest('api/status.php');
+            const data = await this.apiRequest('api/auth/status.php');
             if (data.success) {
                 this.user = data.data;
                 this.showApp();
@@ -145,7 +145,7 @@ class App {
     
     async login(email, password, form) {
         try {
-            const data = await this.apiRequest('api/login.php', {
+            const data = await this.apiRequest('api/auth/login.php', {
                 method: 'POST',
                 body: JSON.stringify({ email, password })
             });
@@ -160,6 +160,7 @@ class App {
                 setTimeout(() => {
                     this.showApp();
                     this.loadExercises();
+                    this.loadTemplates();
                     this.loadUserWorkouts();
                 }, 1000);
             } else {
@@ -184,7 +185,7 @@ class App {
             formData.append('email', email);
             formData.append('password', password);
 
-            const data = await this.apiRequest('api/register.php', {
+            const data = await this.apiRequest('api/auth/register.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData.toString()
@@ -211,7 +212,7 @@ class App {
     
     async logout() {
         try {
-            await this.apiRequest('api/logout.php', {
+            await this.apiRequest('api/auth/logout.php', {
                 method: 'POST',
                 body: JSON.stringify({})
             });
