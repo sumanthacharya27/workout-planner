@@ -1,4 +1,3 @@
-<!-- includes/response.php -->
 <?php
 
 function sendJSON(array $payload, int $statusCode = 200): void {
@@ -16,7 +15,7 @@ function success(string $message = 'Success', array $data = []): void {
     sendJSON([
         'success' => true,
         'data' => $data,
-        'message' => $message
+        'message' => $message,
     ]);
 }
 
@@ -24,7 +23,7 @@ function errorResponse(string $message = 'Error', int $statusCode = 400, array $
     sendJSON([
         'success' => false,
         'data' => $data,
-        'message' => $message
+        'message' => $message,
     ], $statusCode);
 }
 
