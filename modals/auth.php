@@ -490,7 +490,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
    * When this file is at modals/auth.php, the endpoint is just 'auth.php'.
    * If you serve the login page from the project root, change to 'modals/auth.php'.
    */
-  const AUTH_ENDPOINT = 'auth.php';
+  const AUTH_ENDPOINT = 'modals/auth.php';
 
   // ── Tab switching ───────────────────────────────────────────────
   let currentTab = 'login';
@@ -604,20 +604,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
   }
 
   // ── API helper ───────────────────────────────────────────────────
-  async function callAuth(action, data) {
+ async function callAuth(action, data) {
+  try {
+    const res = await fetch(AUTH_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ action, ...data }),
+    });
+
+    const text = await res.text(); // 👈 safer
+
     try {
-      const res = await fetch(AUTH_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ action, ...data }),
-      });
-      if (!res.ok) throw new Error('Server error ' + res.status);
-      return await res.json();
-    } catch (err) {
-      return { success: false, message: 'Network error. Please try again.' };
+      return JSON.parse(text); // try parsing JSON
+    } catch {
+      console.error("Invalid JSON response:", text); // debug
+      return { success: false, message: 'Server returned invalid response' };
     }
+
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: 'Network error. Please try again.' };
   }
+}
 
   // ── Login ────────────────────────────────────────────────────────
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -639,7 +648,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
     if (result.success) {
       showToast(result.message || 'Welcome back!', 'success');
       // Redirect to the main app — adjust path as needed
-      setTimeout(() => { window.location.href = '../index.php'; }, 1200);
+      setTimeout(() => { window.location.href = 'index.php'; }, 1200);
     } else {
       showToast(result.message || 'Login failed.', 'error');
       const msg = result.message || '';
@@ -690,7 +699,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || (isset($_GET['action']) && $_GET['a
       const res = await fetch(`${AUTH_ENDPOINT}?action=check`, { credentials: 'same-origin' });
       const d   = await res.json();
       // If already logged in, skip the auth page
-      if (d.logged_in) window.location.href = '../index.php';
+      if (d.logged_in) window.location.href = 'index.php';
     } catch (_) { /* silently continue to login page */ }
   })();
 </script>
