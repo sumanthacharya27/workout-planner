@@ -9,6 +9,7 @@ class App {
         this.currentWorkout = [];
         this.allExercises = [];
         this.templates = [];
+        this.adminTemplates = [];
         this.execution = {
             workoutId: null,
             workout: null,
@@ -72,6 +73,11 @@ class App {
                 this.switchPage(e.target.dataset.page);
             });
         });
+
+        const adminTemplateForm = document.getElementById('adminTemplateForm');
+        if (adminTemplateForm) {
+            adminTemplateForm.addEventListener('submit', (e) => this.handleAdminTemplateSubmit(e));
+        }
         
         // Exercise filters
         document.getElementById('muscleFilter').addEventListener('change', () => this.filterExercises());
@@ -134,6 +140,9 @@ class App {
                 await this.loadExercises();
                 await this.loadTemplates();
                 await this.loadUserWorkouts();
+                if (this.isAdminUser()) {
+                    await this.loadAdminTemplates();
+                }
             } else {
                 this.showAuthModal();
             }
@@ -162,6 +171,9 @@ class App {
                     this.loadExercises();
                     this.loadTemplates();
                     this.loadUserWorkouts();
+                    if (this.isAdminUser()) {
+                        this.loadAdminTemplates();
+                    }
                 }, 1000);
             } else {
                 message.classList.remove('success');
@@ -249,13 +261,17 @@ class App {
         }
     }
 
-    applyAdminPrivileges() {
-        const templatePanel = this.getElement('templateAdminPanel');
-        const exercisePanel = this.getElement('exerciseAdminPanel');
-        const isAdmin = !!this.user?.role && this.user.role === 'admin';
+    isAdminUser() {
+        return (this.user?.email || '').toLowerCase() === 'admin@gmail.com' || this.user?.is_admin === true;
+    }
 
-        if (templatePanel) templatePanel.classList.toggle('hidden', !isAdmin);
-        if (exercisePanel) exercisePanel.classList.toggle('hidden', !isAdmin);
+    applyAdminPrivileges() {
+        const adminNavBtn = this.getElement('adminNavBtn');
+        const canAccessAdmin = this.isAdminUser();
+
+        if (adminNavBtn) {
+            adminNavBtn.classList.toggle('hidden', !canAccessAdmin);
+        }
     }
 
 
@@ -484,6 +500,93 @@ class App {
         } else {
             alert(data.message || 'Failed to delete template');
         }
+    }
+
+
+    async loadAdminTemplates() {
+        if (!this.isAdminUser()) {
+            return;
+        }
+
+        const data = await this.apiRequest('api/admin/templates.php');
+        if (!data.success) {
+            this.showAdminMessage(data.message || 'Failed to load templates', 'error');
+            return;
+        }
+
+        this.adminTemplates = data.data.templates || [];
+        this.renderAdminTemplates();
+    }
+
+    async handleAdminTemplateSubmit(event) {
+        event.preventDefault();
+        if (!this.isAdminUser()) {
+            this.showAdminMessage('Admin access required', 'error');
+            return;
+        }
+
+        const name = (document.getElementById('adminTemplateName')?.value || '').trim();
+        const description = (document.getElementById('adminTemplateDescription')?.value || '').trim();
+
+        if (!name || !description) {
+            this.showAdminMessage('Name and description are required', 'error');
+            return;
+        }
+
+        const data = await this.apiRequest('api/admin/templates.php', {
+            method: 'POST',
+            body: JSON.stringify({ name, description })
+        });
+
+        if (!data.success) {
+            this.showAdminMessage(data.message || 'Failed to add template', 'error');
+            return;
+        }
+
+        this.adminTemplates = data.data.templates || [];
+        this.renderAdminTemplates();
+        this.showAdminMessage('Template added successfully', 'success');
+        await this.loadTemplates();
+        event.target.reset();
+    }
+
+    renderAdminTemplates() {
+        const list = document.getElementById('adminTemplatesList');
+        if (!list) {
+            return;
+        }
+
+        list.innerHTML = '';
+
+        if (!this.adminTemplates.length) {
+            list.innerHTML = '<p class="text-sm text-gray-500">No templates available.</p>';
+            return;
+        }
+
+        this.adminTemplates.forEach((template) => {
+            const item = document.createElement('div');
+            item.className = 'rounded-md border border-gray-200 p-4';
+            item.innerHTML = `
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="font-semibold text-gray-900">${template.name}</p>
+                        <p class="text-sm text-gray-600 mt-1">${template.description || ''}</p>
+                    </div>
+                    <span class="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">#${template.id}</span>
+                </div>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+    showAdminMessage(message, type) {
+        const messageElement = document.getElementById('adminTemplateMessage');
+        if (!messageElement) {
+            return;
+        }
+
+        messageElement.textContent = message;
+        messageElement.className = type === 'success' ? 'text-sm text-emerald-600' : 'text-sm text-red-600';
     }
 
     getSetNamesForTemplate(template) {
@@ -1045,6 +1148,11 @@ class App {
     
     // ===== NAVIGATION =====
     switchPage(pageName) {
+        if (pageName === 'admin' && !this.isAdminUser()) {
+            this.showAdminMessage('Admin access required', 'error');
+            return;
+        }
+
         // Update nav buttons
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.page === pageName);

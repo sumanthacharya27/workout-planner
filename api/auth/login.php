@@ -27,7 +27,9 @@ try {
 
     success('Login successful', [
         'user_id' => $auth->getCurrentUserId(),
-        'user_name' => $auth->getCurrentUserName()
+        'user_name' => $auth->getCurrentUserName(),
+        'email' => $auth->getCurrentUserEmail(),
+        'is_admin' => isAdmin()
     ]);
 } catch (Throwable $e) {
     errorResponse('Server error: ' . $e->getMessage(), 500);

@@ -1,6 +1,7 @@
 <?php
 session_start();
 $isLoggedIn = isset($_SESSION['user_id']);
+$isAdmin = isset($_SESSION['email']) && strtolower((string)$_SESSION['email']) === 'admin@gmail.com';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -31,7 +32,11 @@ $isLoggedIn = isset($_SESSION['user_id']);
                         <button class="nav-btn" data-page="library">Exercises</button>
                         <button class="nav-btn" data-page="builder">Build Workout</button>
                         <button class="nav-btn" data-page="workouts">My Workouts</button>
-                        <button class="nav-btn" data-page="history">History</button>                    </nav>
+                        <button class="nav-btn" data-page="history">History</button>
+                        <?php if ($isAdmin): ?>
+                            <button class="nav-btn" data-page="admin" id="adminNavBtn">Admin</button>
+                        <?php endif; ?>
+                    </nav>
                     <div class="user-menu">
                         <span id="userName"></span>
                         <button id="logoutBtn" class="btn btn-outline">Logout</button>
@@ -49,6 +54,9 @@ $isLoggedIn = isset($_SESSION['user_id']);
             <?php include 'pages/workouts.php'; ?>
             <?php include 'pages/execution.php'; ?>
             <?php include 'pages/history.php'; ?>
+            <?php if ($isAdmin): ?>
+                <?php include 'pages/admin.php'; ?>
+            <?php endif; ?>
         </main>
     </div>
 

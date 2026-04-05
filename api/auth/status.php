@@ -11,7 +11,9 @@ try {
 
     success('Logged in', [
         'user_id' => $auth->getCurrentUserId(),
-        'user_name' => $auth->getCurrentUserName()
+        'user_name' => $auth->getCurrentUserName(),
+        'email' => $auth->getCurrentUserEmail(),
+        'is_admin' => isAdmin()
     ]);
 } catch (Throwable $e) {
     errorResponse('Server error', 500);

@@ -42,7 +42,7 @@ class Auth {
             return ['success' => false, 'message' => 'Invalid credentials'];
         }
 
-        $stmt = $this->db->prepare('SELECT id, password, name FROM users WHERE email = ? LIMIT 1');
+        $stmt = $this->db->prepare('SELECT id, password, name, email FROM users WHERE email = ? LIMIT 1');
         $stmt->bind_param('s', $email);
         $stmt->execute();
         $user = $stmt->get_result()->fetch_assoc();
@@ -54,6 +54,7 @@ class Auth {
         session_regenerate_id(true);
         $_SESSION['user_id'] = (int)$user['id'];
         $_SESSION['user_name'] = $user['name'];
+        $_SESSION['email'] = $user['email'];
         $_SESSION['last_activity'] = time();
 
         return [
@@ -62,6 +63,7 @@ class Auth {
             'data' => [
                 'user_id' => (int)$user['id'],
                 'user_name' => $user['name'],
+                'email' => $user['email'],
             ],
         ];
     }
@@ -99,6 +101,14 @@ class Auth {
     public function getCurrentUserName(): ?string {
         return $_SESSION['user_name'] ?? null;
     }
+
+    public function getCurrentUserEmail(): ?string {
+        return $_SESSION['email'] ?? null;
+    }
+}
+
+function isAdmin(): bool {
+    return isset($_SESSION['email']) && strtolower((string)$_SESSION['email']) === 'admin@gmail.com';
 }
 
 $auth = new Auth($db);
