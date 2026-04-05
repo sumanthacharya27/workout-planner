@@ -2,7 +2,7 @@
   "name": "workout-planner",
   "version": "1.0.0",
   "description": "GymPlanner Pro is a lightweight workout planning and tracking app built with **PHP + vanilla JavaScript** and a **Tailwind CSS UI**.",
-  "main": "tailwind.config.js",
+ 
   "scripts": {
     "build:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --minify",
     "watch:css": "tailwindcss -i ./src/input.css -o ./public/tailwind.css --watch",
