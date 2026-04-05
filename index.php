@@ -1,5 +1,6 @@
 <?php
 session_start();
+$isLoggedIn = isset($_SESSION['user_id']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -12,10 +13,13 @@ session_start();
 <body>
    
     
-<?php include 'modals/auth.php'; ?>
-    
-    <!-- Main App Container (hidden until logged in) -->
-    <div id="mainApp" class="hidden">
+<?php if (!$isLoggedIn): ?>
+
+    <?php include 'modals/auth.php'; ?>
+
+<?php else: ?>
+
+    <div id="mainApp">
         <!-- Header -->
         <header class="header">
             <div class="container">
@@ -37,16 +41,18 @@ session_start();
         </header>
         
         <!-- Main Content -->
-        <main class="container main-content">
+         <main class="container main-content">
             <?php include 'pages/dashboard.php'; ?>
             <?php include 'pages/templates.php'; ?>
             <?php include 'pages/library.php'; ?>
-            <?php include 'pages/builder.php'; ?>
+            <?php include 'pages\builder.php'; ?>
             <?php include 'pages/workouts.php'; ?>
             <?php include 'pages/execution.php'; ?>
             <?php include 'pages/history.php'; ?>
         </main>
     </div>
+
+<?php endif; ?>
     
     <script src="public/app.js"></script>
 </body>
