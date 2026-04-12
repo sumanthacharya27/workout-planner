@@ -29,7 +29,9 @@ if (!isset($_SESSION['user_id'])) {
                 <li><a href="#" class="nav-link" data-page="custom">Create</a></li>
                 <li><a href="#" class="nav-link" data-page="history">History</a></li>
                 <li><a href="#" class="nav-link" data-page="progress">Progress</a></li>
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                 <li><a href="#" class="nav-link" data-page="admin">Admin</a></li>
+                <?php endif; ?>
                 <li><a href="logout.php" class="nav-link logout-link">Logout</a></li>
             </ul>
         </div>
@@ -150,6 +152,7 @@ if (!isset($_SESSION['user_id'])) {
         </section>
 
         <!-- Admin Panel Section -->
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
         <section id="admin" class="page-section">
             <h1>Admin Panel</h1>
             <p class="subtitle">Manage pre-made workouts and exercises</p>
@@ -207,6 +210,7 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
             </div>
         </section>
+        <?php endif; ?>
 
         <!-- Workout Execution Section -->
         <section id="execute" class="page-section">
