@@ -3,7 +3,7 @@
 // LOGIN PAGE
 // ============================================
 // login.php
-// Handles admin authentication
+// Handles authentication (single fixed admin + registered users)
 
 session_start();
 
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             // Query user
-            $stmt = $pdo->prepare('SELECT id, username, password, role FROM users WHERE username = ?');
+            $stmt = $pdo->prepare('SELECT id, username, password FROM users WHERE username = ?');
             $stmt->execute([$username]);
             $user = $stmt->fetch();
             
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($user && password_verify($password, $user['password'])) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
-                $_SESSION['role'] = $user['role'];
+                $_SESSION['role'] = $user['username'] === 'admin' ? 'admin' : 'user';
                 header('Location: index.php');
                 exit;
             } else {
