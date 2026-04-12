@@ -584,7 +584,7 @@ function showPage(pageId) {
     // Load data when showing certain pages
     if (pageId === 'history') {
         renderWorkoutHistory('all');
-    } else if (pageId === 'admin') {
+    } else if (pageId === 'admin' && document.getElementById('admin')) {
         renderAdminWorkoutsList(allWorkouts);
     }
 }
@@ -1025,27 +1025,30 @@ function setupEventListeners() {
         showPage('dashboard');
     });
     
-    // Admin form
-    document.getElementById('adminAddExerciseBtn').addEventListener('click', addExerciseToAdmin);
-    document.getElementById('adminSaveWorkout').addEventListener('click', saveAdminWorkoutForm);
-    document.getElementById('adminCancelWorkout').addEventListener('click', () => {
-        adminExercises = [];
-        document.getElementById('adminWorkoutName').value = '';
-        document.getElementById('adminWorkoutDesc').value = '';
-        renderAdminExercises();
-    });
-    
-    // Admin tabs
-    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const tab = btn.getAttribute('data-tab');
-            document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
-            btn.classList.add('active');
-            document.getElementById(tab).classList.add('active');
+    // Admin form (only exists for the fixed admin account)
+    const adminAddExerciseBtn = document.getElementById('adminAddExerciseBtn');
+    if (adminAddExerciseBtn) {
+        adminAddExerciseBtn.addEventListener('click', addExerciseToAdmin);
+        document.getElementById('adminSaveWorkout').addEventListener('click', saveAdminWorkoutForm);
+        document.getElementById('adminCancelWorkout').addEventListener('click', () => {
+            adminExercises = [];
+            document.getElementById('adminWorkoutName').value = '';
+            document.getElementById('adminWorkoutDesc').value = '';
+            renderAdminExercises();
         });
-    });
+
+        // Admin tabs
+        document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = btn.getAttribute('data-tab');
+                document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(tab).classList.add('active');
+            });
+        });
+    }
     
     // Workout execution
     document.getElementById('nextExercise').addEventListener('click', nextExercise);
