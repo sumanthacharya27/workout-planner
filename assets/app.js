@@ -6,7 +6,8 @@
 // ============================================
 // CONFIGURATION
 // ============================================
-const API_BASE = '/gym_plan';  // App lives at localhost/gym_plan/
+// Dynamically detect base path — works no matter what folder name you use in htdocs
+const API_BASE = window.location.pathname.replace(/\/[^\/]*$/, '');
 
 // ============================================
 // STATE MANAGEMENT
@@ -309,12 +310,13 @@ function renderWorkoutsList(workouts, filter = 'all') {
 }
 
 /**
- * Render saved custom workouts
+ * Render saved custom workouts — only shows the logged-in user's own workouts
  */
 function renderSavedWorkouts(workouts) {
     const container = document.getElementById('savedWorkoutsList');
     
-    let custom = workouts.filter(w => w.is_custom);
+    // Users only see their own custom workouts; admins see all custom workouts
+    let custom = workouts.filter(w => w.is_custom && (IS_ADMIN || w.created_by == USER_ID));
     
     if (custom.length === 0) {
         container.innerHTML = '<p class="empty-state">No custom workouts yet. Create your first one!</p>';
@@ -586,6 +588,8 @@ function showPage(pageId) {
         renderWorkoutHistory('all');
     } else if (pageId === 'admin' && document.getElementById('admin')) {
         renderAdminWorkoutsList(allWorkouts);
+    } else if (pageId === 'progress') {
+        loadProgressPage(currentProgressRange);
     }
 }
 
@@ -1050,6 +1054,13 @@ function setupEventListeners() {
         });
     }
     
+    // Progress range buttons
+    document.querySelectorAll('.range-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            loadProgressPage(parseInt(btn.dataset.range));
+        });
+    });
+
     // Workout execution
     document.getElementById('nextExercise').addEventListener('click', nextExercise);
     document.getElementById('prevExercise').addEventListener('click', previousExercise);
@@ -1079,3 +1090,414 @@ function setupEventListeners() {
 // ============================================
 
 document.addEventListener('DOMContentLoaded', initPage);
+
+
+// ============================================
+// PROGRESS PAGE
+// ============================================
+
+let currentProgressRange = 30;
+
+// Chart instances — kept so we can destroy before re-creating
+let chartFrequency   = null;
+let chartDuration    = null;
+let chartDifficulty  = null;
+let chartWorkoutDist = null;
+
+// Chart.js global defaults
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    Chart.defaults.color = '#495057';
+}
+
+// Colour palette
+const CHART_COLORS = [
+    '#FF6B35', '#F7931E', '#FFD23F', '#06D6A0',
+    '#1B98E0', '#A855F7', '#EC4899', '#14B8A6'
+];
+
+/**
+ * Main entry-point — called by showPage('progress') and range buttons
+ */
+async function loadProgressPage(days = 30) {
+    currentProgressRange = days;
+
+    // Highlight active range button
+    document.querySelectorAll('.range-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.range) === days);
+    });
+
+    try {
+        const res  = await fetch(`${API_BASE}/api/get_progress.php?range=${days}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed');
+
+        renderProgressStats(data.stats, data.week_summary);
+        renderFrequencyChart(data.daily_data, days);
+        renderDurationChart(data.session_data);
+        renderDifficultyChart(data.difficulty_dist);
+        renderWorkoutDistChart(data.workout_dist);
+        renderPersonalRecords(data.personal_records);
+        renderAchievements(data.stats);
+
+    } catch (err) {
+        console.error('Progress load error:', err);
+    }
+}
+
+// ── Summary stat cards ────────────────────────────────────────────────────────
+function renderProgressStats(stats, weekSummary) {
+    const setEl = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
+
+    const hours = stats.total_time ? Math.round(stats.total_time / 60) : 0;
+    setEl('progTotalWorkouts', stats.total_workouts || 0);
+    setEl('progTotalTime',     hours + 'h');
+    setEl('progStreak',        (stats.current_streak || 0) + ' 🔥');
+    setEl('progWeekCount',     (weekSummary?.week_workouts || 0) + ' sessions');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function destroyChart(ref) {
+    if (ref) { try { ref.destroy(); } catch(e) {} }
+    return null;
+}
+
+function showChartOrEmpty(canvasId, emptyId, hasData) {
+    const canvas = document.getElementById(canvasId);
+    const empty  = document.getElementById(emptyId);
+    if (!canvas || !empty) return;
+    canvas.style.display = hasData ? 'block' : 'none';
+    empty.style.display  = hasData ? 'none'  : 'block';
+}
+
+// ── Fill a date range with zeros ──────────────────────────────────────────────
+function buildDateRange(days) {
+    const map = {};
+    for (let i = days - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        map[key] = 0;
+    }
+    return map;
+}
+
+// ── 1. Frequency line chart ───────────────────────────────────────────────────
+function renderFrequencyChart(dailyData, days) {
+    chartFrequency = destroyChart(chartFrequency);
+    const hasData = dailyData && dailyData.length > 0;
+    showChartOrEmpty('frequencyChart', 'freqEmpty', hasData);
+    if (!hasData) return;
+
+    // Build full date range, fill with actual counts
+    const rangeMap = buildDateRange(days);
+    dailyData.forEach(row => {
+        if (rangeMap.hasOwnProperty(row.workout_date)) {
+            rangeMap[row.workout_date] = parseInt(row.workout_count) || 0;
+        }
+    });
+
+    const labels = Object.keys(rangeMap).map(d => {
+        const dt = new Date(d + 'T00:00:00');
+        return days <= 7
+            ? dt.toLocaleDateString('en', { weekday: 'short', day: 'numeric' })
+            : dt.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    });
+    const values = Object.values(rangeMap);
+
+    const ctx = document.getElementById('frequencyChart').getContext('2d');
+    chartFrequency = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Workouts',
+                data: values,
+                borderColor: '#FF6B35',
+                backgroundColor: 'rgba(255,107,53,0.12)',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: '#FF6B35',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                tension: 0.4,
+                fill: true,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.parsed.y} workout${ctx.parsed.y !== 1 ? 's' : ''}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1, precision: 0 },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        maxTicksLimit: days <= 7 ? 7 : (days <= 30 ? 10 : 12),
+                        maxRotation: 40,
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ── 2. Duration bar chart ─────────────────────────────────────────────────────
+function renderDurationChart(sessionData) {
+    chartDuration = destroyChart(chartDuration);
+    const hasData = sessionData && sessionData.length > 0;
+    showChartOrEmpty('durationChart', 'durEmpty', hasData);
+    if (!hasData) return;
+
+    const labels = sessionData.map(s => {
+        const d = new Date(s.completed_at);
+        return d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    });
+    const values = sessionData.map(s => parseInt(s.duration) || 0);
+
+    const ctx = document.getElementById('durationChart').getContext('2d');
+    chartDuration = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Duration (min)',
+                data: values,
+                backgroundColor: sessionData.map((_, i) =>
+                    `rgba(255,107,53,${0.5 + (i % 3) * 0.15})`
+                ),
+                borderColor: '#FF6B35',
+                borderWidth: 1.5,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.parsed.y} min`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: v => v + 'm' },
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { maxRotation: 45 }
+                }
+            }
+        }
+    });
+}
+
+// ── 3. Difficulty pie chart ───────────────────────────────────────────────────
+function renderDifficultyChart(diffData) {
+    chartDifficulty = destroyChart(chartDifficulty);
+    const hasData = diffData && diffData.length > 0;
+    showChartOrEmpty('difficultyChart', 'diffEmpty', hasData);
+    if (!hasData) return;
+
+    const colorMap = {
+        beginner:     '#06D6A0',
+        intermediate: '#F7931E',
+        advanced:     '#EF476F',
+    };
+    const labels = diffData.map(d => d.difficulty.charAt(0).toUpperCase() + d.difficulty.slice(1));
+    const values = diffData.map(d => parseInt(d.count));
+    const colors = diffData.map(d => colorMap[d.difficulty] || '#1B98E0');
+
+    const ctx = document.getElementById('difficultyChart').getContext('2d');
+    chartDifficulty = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                data: values,
+                backgroundColor: colors,
+                borderColor: '#fff',
+                borderWidth: 3,
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 12, font: { size: 11 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.label}: ${ctx.parsed} session${ctx.parsed !== 1 ? 's' : ''}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ── 4. Workout distribution pie chart ─────────────────────────────────────────
+function renderWorkoutDistChart(distData) {
+    chartWorkoutDist = destroyChart(chartWorkoutDist);
+    const hasData = distData && distData.length > 0;
+    showChartOrEmpty('workoutDistChart', 'distEmpty', hasData);
+    if (!hasData) return;
+
+    const labels = distData.map(d => d.name);
+    const values = distData.map(d => parseInt(d.count));
+
+    const ctx = document.getElementById('workoutDistChart').getContext('2d');
+    chartWorkoutDist = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{
+                data: values,
+                backgroundColor: CHART_COLORS.slice(0, labels.length),
+                borderColor: '#fff',
+                borderWidth: 3,
+                hoverOffset: 8,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { padding: 10, font: { size: 10 }, boxWidth: 12 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.label}: ${ctx.parsed}x`
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ── 5. Personal Records ───────────────────────────────────────────────────────
+function renderPersonalRecords(records) {
+    const container = document.getElementById('prsList');
+    if (!container) return;
+
+    if (!records || records.length === 0) {
+        container.innerHTML = '<p class="empty-state">Complete weighted exercises to see personal records here!</p>';
+        return;
+    }
+
+    container.innerHTML = records.map(pr => {
+        const volume = (pr.best_weight * pr.best_volume) || 0;
+        return `
+        <div class="pr-card">
+            <div class="pr-exercise-name">${escapeHtml(pr.exercise_name)}</div>
+            <div class="pr-value">${parseFloat(pr.best_weight).toFixed(1)}</div>
+            <div class="pr-unit">kg best weight</div>
+            <div class="pr-meta">
+                ${pr.sets}×${pr.reps} reps &nbsp;·&nbsp; Vol: ${volume.toFixed(0)} kg
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ── 6. Achievements ───────────────────────────────────────────────────────────
+function renderAchievements(stats) {
+    const container = document.getElementById('achievementsList');
+    if (!container) return;
+
+    const total   = parseInt(stats.total_workouts) || 0;
+    const streak  = parseInt(stats.current_streak) || 0;
+    const minutes = parseInt(stats.total_time)     || 0;
+
+    const achievements = [
+        {
+            icon: '🏆', name: 'First Step',
+            desc: 'Complete your first workout',
+            unlocked: total >= 1,
+            badge: total >= 1 ? 'Unlocked' : '0/1'
+        },
+        {
+            icon: '🔥', name: 'Week Warrior',
+            desc: '7-day workout streak',
+            unlocked: streak >= 7,
+            badge: streak >= 7 ? 'Unlocked' : `${streak}/7 days`
+        },
+        {
+            icon: '💪', name: 'Dedicated',
+            desc: 'Complete 10 workouts',
+            unlocked: total >= 10,
+            badge: total >= 10 ? 'Unlocked' : `${total}/10`
+        },
+        {
+            icon: '⚡', name: 'Consistency King',
+            desc: '30-day workout streak',
+            unlocked: streak >= 30,
+            badge: streak >= 30 ? 'Unlocked' : `${streak}/30 days`
+        },
+        {
+            icon: '🎯', name: 'Half Century',
+            desc: 'Complete 50 workouts',
+            unlocked: total >= 50,
+            badge: total >= 50 ? 'Unlocked' : `${total}/50`
+        },
+        {
+            icon: '🌟', name: 'Century Club',
+            desc: 'Complete 100 workouts',
+            unlocked: total >= 100,
+            badge: total >= 100 ? 'Unlocked' : `${total}/100`
+        },
+        {
+            icon: '⏱️', name: 'Time Investor',
+            desc: 'Train for 10+ hours total',
+            unlocked: minutes >= 600,
+            badge: minutes >= 600 ? 'Unlocked' : `${Math.round(minutes/60)}/10h`
+        },
+        {
+            icon: '🚀', name: 'Iron Will',
+            desc: 'Train for 50+ hours total',
+            unlocked: minutes >= 3000,
+            badge: minutes >= 3000 ? 'Unlocked' : `${Math.round(minutes/60)}/50h`
+        },
+    ];
+
+    container.innerHTML = achievements.map(a => `
+        <div class="achievement-card ${a.unlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-icon">${a.icon}</div>
+            <div class="achievement-name">${a.name}</div>
+            <div class="achievement-desc">${a.desc}</div>
+            <span class="achievement-badge">${a.badge}</span>
+        </div>
+    `).join('');
+}
+
+// ── Helper: escape HTML ───────────────────────────────────────────────────────
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}

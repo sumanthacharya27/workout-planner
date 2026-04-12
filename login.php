@@ -29,15 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             // Query user
-            $stmt = $pdo->prepare('SELECT id, username, password FROM users WHERE username = ?');
+            $stmt = $pdo->prepare('SELECT id, username, password, role FROM users WHERE username = ?');
             $stmt->execute([$username]);
             $user = $stmt->fetch();
             
             // Verify credentials
             if ($user && password_verify($password, $user['password'])) {
+                session_regenerate_id(true); // prevent session fixation
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
-                $_SESSION['role'] = $user['username'] === 'admin' ? 'admin' : 'user';
+                $_SESSION['role'] = $user['role']; // use role from DB, not username
                 header('Location: index.php');
                 exit;
             } else {
