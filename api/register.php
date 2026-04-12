@@ -36,12 +36,6 @@ try {
         exit;
     }
 
-    if (strtolower($username) === 'admin') {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'This username is reserved']);
-        exit;
-    }
-
     if (empty($password) || strlen($password) < 6) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Password must be at least 6 characters']);
@@ -61,14 +55,18 @@ try {
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
     // Insert new user
-    $insertStmt = $pdo->prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)');
-    $insertStmt->execute([sanitize($username), $hashedPassword, 'user']);
+    $insertStmt = $pdo->prepare('INSERT INTO users (username, password) VALUES (?, ?)');
+    $insertStmt->execute([sanitize($username), $hashedPassword]);
     $newUserId = $pdo->lastInsertId();
 
     // Auto-login: set session
     $_SESSION['user_id'] = $newUserId;
     $_SESSION['username'] = sanitize($username);
     $_SESSION['role'] = 'user'; // New registrations are always regular users
+
+    // Initialize user stats for the new user
+    $statsStmt = $pdo->prepare('INSERT INTO user_stats (user_id) VALUES (?)');
+    $statsStmt->execute([$newUserId]);
 
     echo json_encode([
         'success'  => true,

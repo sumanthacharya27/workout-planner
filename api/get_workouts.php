@@ -6,10 +6,7 @@
 // Returns all pre-made and custom workouts with exercises
 
 header('Content-Type: application/json');
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once '../config/db.php';
-
-requireAuth(); // must be logged in
 
 try {
     // Get all workouts with their exercises
@@ -20,7 +17,6 @@ try {
             w.description,
             w.difficulty,
             w.is_custom,
-            w.created_by,
             w.created_at
         FROM workouts w
         ORDER BY w.is_custom ASC, w.created_at DESC

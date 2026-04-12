@@ -3,7 +3,7 @@
 // LOGIN PAGE
 // ============================================
 // login.php
-// Handles authentication (single fixed admin + registered users)
+// Handles admin authentication
 
 session_start();
 
@@ -35,10 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Verify credentials
             if ($user && password_verify($password, $user['password'])) {
-                session_regenerate_id(true); // prevent session fixation
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
-                $_SESSION['role'] = $user['role']; // use role from DB, not username
+                $_SESSION['role'] = $user['role'];
                 header('Location: index.php');
                 exit;
             } else {
@@ -315,13 +314,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-serif
     </div>
 
     <div class="panel active" id="panel-login">
-        <form method="POST" action="" onsubmit="return doLogin()">
+        <form method="POST" action="">
       <?php if (!empty($error)): ?>
         <div style="background:#fef2f2;border:2px solid #EF476F;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1.25rem;font-size:0.88rem;font-weight:600;color:#c0392b;"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
       <div class="form-group">
         <label>Username</label>
-        <input type="text" id="l-email" name="username" placeholder="Enter your username" autocomplete="username" value="<?= htmlspecialchars($_POST['username'] ?? '') ?>" />
+        <input type="text" id="l-email" name="username" placeholder="Enter your username" autocomplete="username" />
         <div class="input-error" id="l-email-err">Please enter your username</div>
       </div>
       <div class="form-group">
@@ -470,11 +469,7 @@ function doLogin(){
   let ok=true;
   if(!username){setErr('l-email-err',true,'l-email');ok=false;}
   if(!pw){setErr('l-pw-err',true,'l-pw');ok=false;}
-  if(ok) {
-      loading('l', true);
-      return true;
-  }
-  return false;
+  if(!ok)return;
 }
 
 async function doRegister(){

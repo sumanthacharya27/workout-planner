@@ -9,7 +9,6 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
-require_once 'config/db.php'; // loads isAdmin() helper
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -18,7 +17,6 @@ require_once 'config/db.php'; // loads isAdmin() helper
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gym Workout Planner</title>
     <link rel="stylesheet" href="assets/styles.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -31,9 +29,7 @@ require_once 'config/db.php'; // loads isAdmin() helper
                 <li><a href="#" class="nav-link" data-page="custom">Create</a></li>
                 <li><a href="#" class="nav-link" data-page="history">History</a></li>
                 <li><a href="#" class="nav-link" data-page="progress">Progress</a></li>
-                <?php if (isAdmin()): ?>
                 <li><a href="#" class="nav-link" data-page="admin">Admin</a></li>
-                <?php endif; ?>
                 <li><a href="logout.php" class="nav-link logout-link">Logout</a></li>
             </ul>
         </div>
@@ -154,7 +150,6 @@ require_once 'config/db.php'; // loads isAdmin() helper
         </section>
 
         <!-- Admin Panel Section -->
-        <?php if (isAdmin()): ?>
         <section id="admin" class="page-section">
             <h1>Admin Panel</h1>
             <p class="subtitle">Manage pre-made workouts and exercises</p>
@@ -212,7 +207,6 @@ require_once 'config/db.php'; // loads isAdmin() helper
                 </div>
             </div>
         </section>
-        <?php endif; ?>
 
         <!-- Workout Execution Section -->
         <section id="execute" class="page-section">
@@ -261,116 +255,50 @@ require_once 'config/db.php'; // loads isAdmin() helper
 
         <!-- Progress Section -->
         <section id="progress" class="page-section">
-            <div class="progress-header">
-                <div>
-                    <h1>Your Progress</h1>
-                    <p class="subtitle">Track your fitness journey</p>
+            <h1>Your Progress</h1>
+            <p class="subtitle">Visualize your achievements</p>
+
+            <div class="progress-stats">
+                <div class="stat-card-large">
+                    <h3>Workout Frequency</h3>
+                    <canvas id="frequencyChart"></canvas>
                 </div>
-                <div class="progress-range-selector">
-                    <button class="range-btn active" data-range="7">7 Days</button>
-                    <button class="range-btn" data-range="30">30 Days</button>
-                    <button class="range-btn" data-range="90">90 Days</button>
-                    <button class="range-btn" data-range="365">1 Year</button>
+                <div class="stat-card-large">
+                    <h3>Exercise Distribution</h3>
+                    <canvas id="exerciseChart"></canvas>
                 </div>
             </div>
 
-            <!-- Summary stat cards -->
-            <div class="progress-summary-cards">
-                <div class="prog-stat-card">
-                    <div class="prog-stat-icon">🏋️</div>
-                    <div class="prog-stat-value" id="progTotalWorkouts">—</div>
-                    <div class="prog-stat-label">Total Workouts</div>
-                </div>
-                <div class="prog-stat-card">
-                    <div class="prog-stat-icon">⏱️</div>
-                    <div class="prog-stat-value" id="progTotalTime">—</div>
-                    <div class="prog-stat-label">Hours Trained</div>
-                </div>
-                <div class="prog-stat-card">
-                    <div class="prog-stat-icon">🔥</div>
-                    <div class="prog-stat-value" id="progStreak">—</div>
-                    <div class="prog-stat-label">Day Streak</div>
-                </div>
-                <div class="prog-stat-card">
-                    <div class="prog-stat-icon">📅</div>
-                    <div class="prog-stat-value" id="progWeekCount">—</div>
-                    <div class="prog-stat-label">This Week</div>
+            <div class="personal-records">
+                <h2>Personal Records</h2>
+                <div id="prsList" class="prs-list">
+                    <p class="empty-state">Complete workouts to track your personal records!</p>
                 </div>
             </div>
 
-            <!-- Charts row 1: Line + Bar -->
-            <div class="charts-row">
-                <div class="chart-card wide">
-                    <div class="chart-card-header">
-                        <h3>📈 Workout Frequency</h3>
-                        <span class="chart-subtitle" id="freqSubtitle">Workouts per day</span>
-                    </div>
-                    <div class="chart-wrap">
-                        <canvas id="frequencyChart"></canvas>
-                    </div>
-                    <div class="chart-empty" id="freqEmpty" style="display:none">
-                        No workout data for this period yet. Start training!
-                    </div>
-                </div>
-
-                <div class="chart-card">
-                    <div class="chart-card-header">
-                        <h3>⏳ Session Duration</h3>
-                        <span class="chart-subtitle">Minutes per session</span>
-                    </div>
-                    <div class="chart-wrap">
-                        <canvas id="durationChart"></canvas>
-                    </div>
-                    <div class="chart-empty" id="durEmpty" style="display:none">
-                        No session data yet.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Charts row 2: Pie + Pie -->
-            <div class="charts-row">
-                <div class="chart-card">
-                    <div class="chart-card-header">
-                        <h3>🥧 Difficulty Split</h3>
-                        <span class="chart-subtitle">By difficulty level</span>
-                    </div>
-                    <div class="chart-wrap chart-wrap-pie">
-                        <canvas id="difficultyChart"></canvas>
-                    </div>
-                    <div class="chart-empty" id="diffEmpty" style="display:none">
-                        No data yet.
-                    </div>
-                </div>
-
-                <div class="chart-card">
-                    <div class="chart-card-header">
-                        <h3>🏅 Favourite Workouts</h3>
-                        <span class="chart-subtitle">Most completed</span>
-                    </div>
-                    <div class="chart-wrap chart-wrap-pie">
-                        <canvas id="workoutDistChart"></canvas>
-                    </div>
-                    <div class="chart-empty" id="distEmpty" style="display:none">
-                        No data yet.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Personal Records -->
-            <div class="pr-section">
-                <h2>🏆 Personal Records</h2>
-                <p class="section-subtitle">Best weight lifted per exercise across all sessions</p>
-                <div id="prsList" class="prs-grid">
-                    <p class="empty-state">Complete weighted workouts to see your personal records!</p>
-                </div>
-            </div>
-
-            <!-- Achievements -->
-            <div class="achievements-section">
-                <h2>⭐ Achievements</h2>
-                <p class="section-subtitle">Milestones you've hit on your journey</p>
+            <div class="achievements">
+                <h2>Achievements & Milestones</h2>
                 <div id="achievementsList" class="achievements-grid">
-                    <!-- Rendered by JS -->
+                    <div class="achievement-card locked">
+                        <div class="achievement-icon">🏆</div>
+                        <div class="achievement-name">First Workout</div>
+                        <div class="achievement-desc">Complete your first workout</div>
+                    </div>
+                    <div class="achievement-card locked">
+                        <div class="achievement-icon">🔥</div>
+                        <div class="achievement-name">Week Warrior</div>
+                        <div class="achievement-desc">7 day workout streak</div>
+                    </div>
+                    <div class="achievement-card locked">
+                        <div class="achievement-icon">💪</div>
+                        <div class="achievement-name">Century Club</div>
+                        <div class="achievement-desc">Complete 100 workouts</div>
+                    </div>
+                    <div class="achievement-card locked">
+                        <div class="achievement-icon">⚡</div>
+                        <div class="achievement-name">Consistency King</div>
+                        <div class="achievement-desc">30 day workout streak</div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -448,13 +376,6 @@ require_once 'config/db.php'; // loads isAdmin() helper
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-        // PHP passes role securely to JS — never trust this for backend checks,
-        // it's only used for showing/hiding UI elements.
-        const IS_ADMIN = <?= json_encode($_SESSION['role'] === 'admin') ?>;
-        const CURRENT_USER = <?= json_encode($_SESSION['username']) ?>;
-        const USER_ID = <?= json_encode((int)$_SESSION['user_id']) ?>;
-    </script>
     <script src="assets/app.js"></script>
 </body>
 </html>
