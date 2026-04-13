@@ -59,10 +59,12 @@ CREATE TABLE exercises (
 CREATE TABLE workout_history (
     id INT PRIMARY KEY AUTO_INCREMENT,
     workout_id INT NOT NULL,
+    user_id INT NULL,
     duration INT,
     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     notes TEXT,
-    FOREIGN KEY (workout_id) REFERENCES workouts(id)
+    FOREIGN KEY (workout_id) REFERENCES workouts(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -70,22 +72,26 @@ CREATE TABLE workout_history (
 -- ============================================
 CREATE TABLE user_stats (
     id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NULL UNIQUE,
     total_workouts INT DEFAULT 0,
     total_exercises INT DEFAULT 0,
     total_time INT DEFAULT 0,
     current_streak INT DEFAULT 0,
     last_workout_date DATE,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Initialize stats
-INSERT INTO user_stats (total_workouts, total_exercises, total_time, current_streak) VALUES (0, 0, 0, 0);
+-- Initialize stats for admin
+INSERT INTO user_stats (user_id, total_workouts, total_exercises, total_time, current_streak) VALUES (1, 0, 0, 0, 0);
 
 -- ============================================
 -- CREATE INDEXES FOR BETTER PERFORMANCE
 -- ============================================
 CREATE INDEX idx_workout_id ON exercises(workout_id);
 CREATE INDEX idx_workout_history_workout_id ON workout_history(workout_id);
+CREATE INDEX idx_workout_history_user ON workout_history(user_id);
 CREATE INDEX idx_workout_history_date ON workout_history(completed_at);
 CREATE INDEX idx_workouts_difficulty ON workouts(difficulty);
 

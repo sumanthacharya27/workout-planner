@@ -52,7 +52,7 @@ function isAuthenticated() {
  * Check if current user is admin
  */
 function isAdmin() {
-    return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+    return isset($_SESSION['role']) && strtolower(trim($_SESSION['role'])) === 'admin';
 }
 
 /**

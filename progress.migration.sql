@@ -1,25 +1,45 @@
 -- ============================================================
--- PROGRESS FIX MIGRATION
--- Run this in phpMyAdmin → your workout_planner database → SQL tab
+-- SAFE PROGRESS FIX MIGRATION (NO DUPLICATE ERRORS)
 -- ============================================================
 
 USE workout_planner;
 
--- Step 1: Add user_id to workout_history (so history is per-user)
+-- ------------------------------------------------------------
+-- Step 1: Ensure user_id exists in workout_history
+-- ------------------------------------------------------------
+ALTER TABLE workout_history 
+ADD COLUMN IF NOT EXISTS user_id INT NULL;
+
+-- Add foreign key (ignore error if already exists)
 ALTER TABLE workout_history
-    ADD COLUMN user_id INT NULL AFTER workout_id,
-    ADD FOREIGN KEY (user_id) REFERENCES users(id);
+ADD CONSTRAINT fk_workout_user
+FOREIGN KEY (user_id) REFERENCES users(id);
 
--- Step 2: Add user_id to user_stats (so stats are per-user)
+-- ------------------------------------------------------------
+-- Step 2: Ensure user_id exists in user_stats
+-- ------------------------------------------------------------
+ALTER TABLE user_stats 
+ADD COLUMN IF NOT EXISTS user_id INT NULL UNIQUE;
+
+-- Add foreign key (ignore if exists)
 ALTER TABLE user_stats
-    ADD COLUMN user_id INT NULL UNIQUE AFTER id,
-    ADD FOREIGN KEY (user_id) REFERENCES users(id);
+ADD CONSTRAINT fk_stats_user
+FOREIGN KEY (user_id) REFERENCES users(id);
 
--- Step 3: Add index for fast per-user lookups
-CREATE INDEX idx_workout_history_user ON workout_history(user_id);
+-- ------------------------------------------------------------
+-- Step 3: Add index for performance
+-- ------------------------------------------------------------
+CREATE INDEX idx_workout_history_user 
+ON workout_history(user_id);
 
--- Step 4: Update the existing dummy stats row to belong to admin (user id=1)
--- (existing history rows will have NULL user_id - they'll be ignored going forward)
-UPDATE user_stats SET user_id = 1 WHERE user_id IS NULL LIMIT 1;
+-- ------------------------------------------------------------
+-- Step 4: Assign existing stats row to admin (id = 1)
+-- ------------------------------------------------------------
+UPDATE user_stats 
+SET user_id = 1 
+WHERE user_id IS NULL 
+LIMIT 1;
 
--- Done! Re-open your app and complete a workout to start seeing progress data.
+-- ============================================================
+-- DONE ✅
+-- ============================================================

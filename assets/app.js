@@ -22,7 +22,6 @@ let userStats = {
     total_time: 0,
     current_streak: 0
 };
-let isAdminAuthenticated = false;
 let progressCharts = {
     frequency: null,
     workoutDistribution: null,
@@ -369,8 +368,9 @@ function renderSavedWorkouts(workouts) {
  */
 function renderAdminWorkoutsList(workouts) {
     const container = document.getElementById('adminWorkoutsList');
+    if (!container) return;
     
-    let premade = workouts.filter(w => !w.is_custom);
+    let premade = (workouts || []).filter(w => !w.is_custom);
     
     if (premade.length === 0) {
         container.innerHTML = '<p class="empty-state">No pre-made workouts yet</p>';
@@ -772,9 +772,19 @@ function quitWorkout() {
  * Show specific page
  */
 function showPage(pageId) {
-    // Check for admin authentication
-    if (pageId === 'admin' && !isAdminAuthenticated) {
-        showPage('admin-login');
+    // Check for admin authentication with case-insensitivity
+    const userRole = (window.APP_CONFIG && window.APP_CONFIG.role) ? window.APP_CONFIG.role.toLowerCase().trim() : 'user';
+    
+    if (pageId === 'admin' && userRole !== 'admin') {
+        showPage('dashboard');
+        showError('Access denied: Administrators only.');
+        return;
+    }
+
+    const targetSection = document.getElementById(pageId);
+    if (!targetSection) {
+        console.warn(`Page section "${pageId}" not found in DOM.`);
+        if (pageId !== 'dashboard') showPage('dashboard');
         return;
     }
 
@@ -782,7 +792,7 @@ function showPage(pageId) {
         section.classList.remove('active');
     });
     
-    document.getElementById(pageId).classList.add('active');
+    targetSection.classList.add('active');
     
     // Update nav links
     document.querySelectorAll('.nav-link').forEach(link => {
@@ -1163,25 +1173,6 @@ function editAdminWorkout(workoutId) {
     };
 }
 
-/**
- * Handle Admin Login Verification
- */
-function handleAdminLogin() {
-    const user = document.getElementById('adminUserField').value;
-    const pass = document.getElementById('adminPassField').value;
-    
-    if (user === 'admin' && pass === '123') {
-        isAdminAuthenticated = true;
-        showSuccess('Admin access granted!');
-        showPage('admin');
-        
-        // Clear fields
-        document.getElementById('adminUserField').value = '';
-        document.getElementById('adminPassField').value = '';
-    } else {
-        showError('Invalid admin credentials');
-    }
-}
 
 /**
  * Load workouts
@@ -1291,13 +1282,6 @@ function setupEventListeners() {
         });
     });
     
-    // Admin login
-    document.getElementById('doAdminLogin').addEventListener('click', handleAdminLogin);
-    
-    // Support enter key in admin login
-    document.getElementById('adminPassField').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleAdminLogin();
-    });
     
     // Workout execution
     document.getElementById('nextExercise').addEventListener('click', nextExercise);
