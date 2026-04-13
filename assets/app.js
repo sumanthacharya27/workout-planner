@@ -41,7 +41,7 @@ async function fetchWorkouts() {
     try {
         const response = await fetch(`${API_BASE}/api/get_workouts.php`);
         const result = await response.json();
-        
+
         if (result.success) {
             allWorkouts = result.data;
             return allWorkouts;
@@ -72,9 +72,9 @@ async function saveCustomWorkout(name, description, exercises) {
                 exercises
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showSuccess('Workout saved successfully!');
             return result.workoutId;
@@ -105,9 +105,9 @@ async function saveWorkoutHistory(workoutId, duration, notes = '') {
                 notes
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             // Refresh stats after saving history
             await fetchUserStats();
@@ -130,7 +130,7 @@ async function fetchWorkoutHistory(filter = 'all') {
     try {
         const response = await fetch(`${API_BASE}/api/get_history.php?filter=${filter}`);
         const result = await response.json();
-        
+
         if (result.success) {
             return result.data;
         } else {
@@ -151,7 +151,7 @@ async function fetchUserStats() {
     try {
         const response = await fetch(`${API_BASE}/api/get_stats.php`);
         const result = await response.json();
-        
+
         if (result.success) {
             userStats = result.data;
             updateDashboardStats();
@@ -205,9 +205,9 @@ async function adminSaveWorkout(name, description, difficulty, exercises) {
                 exercises
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showSuccess('Pre-made workout created successfully!');
             return result.workoutId;
@@ -229,7 +229,7 @@ async function deleteWorkout(workoutId) {
     if (!confirm('Are you sure you want to delete this workout?')) {
         return false;
     }
-    
+
     try {
         const response = await fetch(`${API_BASE}/api/delete_workout.php`, {
             method: 'POST',
@@ -238,9 +238,9 @@ async function deleteWorkout(workoutId) {
             },
             body: JSON.stringify({ workoutId })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showSuccess('Workout deleted successfully!');
             return true;
@@ -273,9 +273,9 @@ async function updateWorkout(workoutId, name, description, difficulty, exercises
                 exercises
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             showSuccess('Workout updated successfully!');
             return true;
@@ -309,31 +309,35 @@ function updateDashboardStats() {
  */
 function renderWorkoutsList(workouts, filter = 'all') {
     const container = document.getElementById('workoutsList');
-    
+
     let filtered = workouts.filter(w => !w.is_custom);
     if (filter !== 'all') {
         filtered = filtered.filter(w => w.difficulty === filter);
     }
-    
+
     if (filtered.length === 0) {
         container.innerHTML = '<p class="empty-state">No workouts found</p>';
         return;
     }
-    
+
     container.innerHTML = filtered.map(workout => `
-        <div class="workout-card" data-workout-id="${workout.id}">
-            <div class="difficulty-badge ${workout.difficulty}">${workout.difficulty}</div>
-            <h3 class="workout-title">${workout.name}</h3>
-            <p class="workout-description">${workout.description || ''}</p>
-            <div class="workout-info">
-                <span class="info-item">
-                    <span class="info-icon">🏋️</span>
-                    <span>${workout.exercises.length} exercises</span>
-                </span>
-            </div>
-            <button class="btn-start-workout" onclick="startWorkout(${workout.id})">Start Workout</button>
+    <div class="workout-card" data-workout-id="${workout.id}">
+        <div class="workout-card-header">
+            <h3 class="workout-card-title">${workout.name}</h3>
+            <span class="workout-badge ${workout.difficulty}">${workout.difficulty}</span>
         </div>
-    `).join('');
+        <p class="workout-card-description">${workout.description || ''}</p>
+        <div class="workout-card-info">
+            <span>
+                <span>🏋️</span>
+                <span>${workout.exercises.length} exercises</span>
+            </span>
+        </div>
+        <div style="margin-top: 1.5rem;">
+            <button class="btn-save btn-primary" onclick="startWorkout(${workout.id})">Start Workout</button>
+        </div>
+    </div>
+`).join('');
 }
 
 /**
@@ -341,14 +345,14 @@ function renderWorkoutsList(workouts, filter = 'all') {
  */
 function renderSavedWorkouts(workouts) {
     const container = document.getElementById('savedWorkoutsList');
-    
+
     let custom = workouts.filter(w => w.is_custom);
-    
+
     if (custom.length === 0) {
         container.innerHTML = '<p class="empty-state">No custom workouts yet. Create your first one!</p>';
         return;
     }
-    
+
     container.innerHTML = custom.map(workout => `
         <div class="saved-workout-item">
             <h3>${workout.name}</h3>
@@ -369,14 +373,14 @@ function renderSavedWorkouts(workouts) {
 function renderAdminWorkoutsList(workouts) {
     const container = document.getElementById('adminWorkoutsList');
     if (!container) return;
-    
+
     let premade = (workouts || []).filter(w => !w.is_custom);
-    
+
     if (premade.length === 0) {
         container.innerHTML = '<p class="empty-state">No pre-made workouts yet</p>';
         return;
     }
-    
+
     container.innerHTML = premade.map(workout => `
         <div class="admin-workout-item">
             <div class="admin-workout-header">
@@ -404,12 +408,12 @@ function renderAdminWorkoutsList(workouts) {
 async function renderWorkoutHistory(filter = 'all') {
     const container = document.getElementById('historyList');
     const history = await fetchWorkoutHistory(filter);
-    
+
     if (history.length === 0) {
         container.innerHTML = '<p class="empty-state">No workout history yet</p>';
         return;
     }
-    
+
     container.innerHTML = history.map(item => `
         <div class="history-item">
             <div class="history-header">
@@ -631,16 +635,16 @@ function showError(message) {
  */
 function startWorkout(workoutId) {
     const workout = allWorkouts.find(w => w.id === workoutId);
-    
+
     if (!workout || !workout.exercises || workout.exercises.length === 0) {
         showError('Workout not found or has no exercises');
         return;
     }
-    
+
     currentWorkout = workout;
     currentExerciseIndex = 0;
     workoutStartTime = Date.now();
-    
+
     showPage('execute');
     document.getElementById('executeWorkoutName').textContent = workout.name;
     displayCurrentExercise();
@@ -651,17 +655,17 @@ function startWorkout(workoutId) {
  */
 function displayCurrentExercise() {
     if (!currentWorkout) return;
-    
+
     const exercise = currentWorkout.exercises[currentExerciseIndex];
     const totalExercises = currentWorkout.exercises.length;
-    
+
     // Update progress
     document.getElementById('currentExerciseNum').textContent = currentExerciseIndex + 1;
     document.getElementById('totalExercisesNum').textContent = totalExercises;
-    
+
     const progressPercent = ((currentExerciseIndex + 1) / totalExercises) * 100;
     document.getElementById('workoutProgressBar').style.width = progressPercent + '%';
-    
+
     // Display exercise
     const display = document.getElementById('exerciseDisplay');
     display.innerHTML = `
@@ -701,7 +705,7 @@ function displayCurrentExercise() {
             </div>
         </div>
     `;
-    
+
     // Update button visibility
     document.getElementById('prevExercise').style.display = currentExerciseIndex > 0 ? 'block' : 'none';
     document.getElementById('nextExercise').style.display = currentExerciseIndex < totalExercises - 1 ? 'block' : 'none';
@@ -736,12 +740,12 @@ async function completeWorkout() {
         showError('No active workout');
         return;
     }
-    
+
     const duration = Math.round((Date.now() - workoutStartTime) / 1000);
-    
+
     // Save to history
     const success = await saveWorkoutHistory(currentWorkout.id, duration);
-    
+
     if (success) {
         showSuccess('Workout completed! Great job! 💪');
         setTimeout(() => {
@@ -774,7 +778,7 @@ function quitWorkout() {
 function showPage(pageId) {
     // Check for admin authentication with case-insensitivity
     const userRole = (window.APP_CONFIG && window.APP_CONFIG.role) ? window.APP_CONFIG.role.toLowerCase().trim() : 'user';
-    
+
     if (pageId === 'admin' && userRole !== 'admin') {
         showPage('dashboard');
         showError('Access denied: Administrators only.');
@@ -791,9 +795,9 @@ function showPage(pageId) {
     document.querySelectorAll('.page-section').forEach(section => {
         section.classList.remove('active');
     });
-    
+
     targetSection.classList.add('active');
-    
+
     // Update nav links
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
@@ -801,7 +805,7 @@ function showPage(pageId) {
             link.classList.add('active');
         }
     });
-    
+
     // Load data when showing certain pages
     if (pageId === 'history') {
         renderWorkoutHistory('all');
@@ -824,7 +828,7 @@ let customExercises = [];
 function addExerciseToCustom() {
     const modal = document.getElementById('exerciseModal');
     modal.style.display = 'block';
-    
+
     // Reset form
     document.getElementById('exerciseName').value = '';
     document.getElementById('exerciseSets').value = '3';
@@ -832,21 +836,21 @@ function addExerciseToCustom() {
     document.getElementById('exerciseWeight').value = '';
     document.getElementById('exerciseRest').value = '60';
     document.getElementById('exerciseNotes').value = '';
-    
+
     // Save exercise handler
-    document.getElementById('saveExercise').onclick = function() {
+    document.getElementById('saveExercise').onclick = function () {
         const name = document.getElementById('exerciseName').value;
         const sets = document.getElementById('exerciseSets').value;
         const reps = document.getElementById('exerciseReps').value;
         const weight = document.getElementById('exerciseWeight').value;
         const rest = document.getElementById('exerciseRest').value;
         const notes = document.getElementById('exerciseNotes').value;
-        
+
         if (!name) {
             showError('Exercise name is required');
             return;
         }
-        
+
         customExercises.push({
             name,
             sets: parseInt(sets),
@@ -855,7 +859,7 @@ function addExerciseToCustom() {
             rest: parseInt(rest),
             notes
         });
-        
+
         renderCustomExercises();
         modal.style.display = 'none';
         showSuccess('Exercise added');
@@ -867,12 +871,12 @@ function addExerciseToCustom() {
  */
 function renderCustomExercises() {
     const container = document.getElementById('exercisesList');
-    
+
     if (customExercises.length === 0) {
         container.innerHTML = '<p class="empty-state">No exercises added yet</p>';
         return;
     }
-    
+
     container.innerHTML = customExercises.map((ex, index) => `
         <div class="exercise-item">
             <div class="exercise-item-info">
@@ -899,26 +903,26 @@ function removeExercise(index) {
 async function saveCustomWorkoutForm() {
     const name = document.getElementById('workoutName').value;
     const description = document.getElementById('workoutDescription').value;
-    
+
     if (!name) {
         showError('Workout name is required');
         return;
     }
-    
+
     if (customExercises.length === 0) {
         showError('Please add at least one exercise');
         return;
     }
-    
+
     const workoutId = await saveCustomWorkout(name, description, customExercises);
-    
+
     if (workoutId) {
         // Reset form
         document.getElementById('workoutName').value = '';
         document.getElementById('workoutDescription').value = '';
         customExercises = [];
         renderCustomExercises();
-        
+
         // Reload workouts
         await loadWorkouts();
         renderSavedWorkouts(allWorkouts);
@@ -937,7 +941,7 @@ let adminExercises = [];
 function addExerciseToAdmin() {
     const modal = document.getElementById('exerciseModal');
     modal.style.display = 'block';
-    
+
     // Reset form
     document.getElementById('exerciseName').value = '';
     document.getElementById('exerciseSets').value = '3';
@@ -945,21 +949,21 @@ function addExerciseToAdmin() {
     document.getElementById('exerciseWeight').value = '';
     document.getElementById('exerciseRest').value = '60';
     document.getElementById('exerciseNotes').value = '';
-    
+
     // Save exercise handler
-    document.getElementById('saveExercise').onclick = function() {
+    document.getElementById('saveExercise').onclick = function () {
         const name = document.getElementById('exerciseName').value;
         const sets = document.getElementById('exerciseSets').value;
         const reps = document.getElementById('exerciseReps').value;
         const weight = document.getElementById('exerciseWeight').value;
         const rest = document.getElementById('exerciseRest').value;
         const notes = document.getElementById('exerciseNotes').value;
-        
+
         if (!name) {
             showError('Exercise name is required');
             return;
         }
-        
+
         adminExercises.push({
             name,
             sets: parseInt(sets),
@@ -968,7 +972,7 @@ function addExerciseToAdmin() {
             rest: parseInt(rest),
             notes
         });
-        
+
         renderAdminExercises();
         modal.style.display = 'none';
         showSuccess('Exercise added');
@@ -980,12 +984,12 @@ function addExerciseToAdmin() {
  */
 function renderAdminExercises() {
     const container = document.getElementById('adminExercisesList');
-    
+
     if (adminExercises.length === 0) {
         container.innerHTML = '<p class="empty-state">No exercises added yet</p>';
         return;
     }
-    
+
     container.innerHTML = adminExercises.map((ex, index) => `
         <div class="exercise-item">
             <div class="exercise-item-info">
@@ -1012,26 +1016,26 @@ async function saveAdminWorkoutForm() {
     const name = document.getElementById('adminWorkoutName').value;
     const description = document.getElementById('adminWorkoutDesc').value;
     const difficulty = document.getElementById('adminDifficulty').value;
-    
+
     if (!name) {
         showError('Workout name is required');
         return;
     }
-    
+
     if (adminExercises.length === 0) {
         showError('Please add at least one exercise');
         return;
     }
-    
+
     const workoutId = await adminSaveWorkout(name, description, difficulty, adminExercises);
-    
+
     if (workoutId) {
         // Reset form
         document.getElementById('adminWorkoutName').value = '';
         document.getElementById('adminWorkoutDesc').value = '';
         adminExercises = [];
         renderAdminExercises();
-        
+
         // Reload workouts
         await loadWorkouts();
         renderAdminWorkoutsList(allWorkouts);
@@ -1190,7 +1194,7 @@ async function initPage() {
     // Load all data
     await loadWorkouts();
     await fetchUserStats();
-    
+
     // Set up event listeners
     setupEventListeners();
 }
@@ -1207,7 +1211,7 @@ function setupEventListeners() {
             showPage(page);
         });
     });
-    
+
     // Quick action buttons
     document.querySelectorAll('.action-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1215,7 +1219,7 @@ function setupEventListeners() {
             showPage(page);
         });
     });
-    
+
     // Filter buttons - workouts
     document.querySelectorAll('#workouts .filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1226,7 +1230,7 @@ function setupEventListeners() {
             renderWorkoutsList(allWorkouts, filter);
         });
     });
-    
+
     // Filter buttons - history
     document.querySelectorAll('#history .filter-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1248,7 +1252,7 @@ function setupEventListeners() {
             loadProgressDashboard(range);
         });
     });
-    
+
     // Custom workout form
     document.getElementById('addExerciseBtn').addEventListener('click', addExerciseToCustom);
     document.getElementById('saveWorkout').addEventListener('click', saveCustomWorkoutForm);
@@ -1259,17 +1263,21 @@ function setupEventListeners() {
         renderCustomExercises();
         showPage('dashboard');
     });
-    
-    // Admin form
-    document.getElementById('adminAddExerciseBtn').addEventListener('click', addExerciseToAdmin);
-    document.getElementById('adminSaveWorkout').addEventListener('click', saveAdminWorkoutForm);
-    document.getElementById('adminCancelWorkout').addEventListener('click', () => {
+
+    // Admin form - wrap all admin listeners in null checks
+    const adminAddExerciseBtn = document.getElementById('adminAddExerciseBtn');
+    const adminSaveWorkout = document.getElementById('adminSaveWorkout');
+    const adminCancelWorkout = document.getElementById('adminCancelWorkout');
+
+    if (adminAddExerciseBtn) adminAddExerciseBtn.addEventListener('click', addExerciseToAdmin);
+    if (adminSaveWorkout) adminSaveWorkout.addEventListener('click', saveAdminWorkoutForm);
+    if (adminCancelWorkout) adminCancelWorkout.addEventListener('click', () => {
         adminExercises = [];
         document.getElementById('adminWorkoutName').value = '';
         document.getElementById('adminWorkoutDesc').value = '';
         renderAdminExercises();
     });
-    
+
     // Admin tabs
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -1278,28 +1286,28 @@ function setupEventListeners() {
             document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById(tab).classList.add('active');
+            document.getElementById(tab)?.classList.add('active');
         });
     });
-    
-    
+
+
     // Workout execution
     document.getElementById('nextExercise').addEventListener('click', nextExercise);
     document.getElementById('prevExercise').addEventListener('click', previousExercise);
     document.getElementById('completeWorkout').addEventListener('click', completeWorkout);
     document.getElementById('quitWorkout').addEventListener('click', quitWorkout);
-    
+
     document.getElementById('backToWorkouts').addEventListener('click', () => {
         quitWorkout();
     });
-    
+
     // Modal close
     document.querySelectorAll('.close').forEach(closeBtn => {
         closeBtn.addEventListener('click', (e) => {
             e.target.closest('.modal').style.display = 'none';
         });
     });
-    
+
     window.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
             e.target.style.display = 'none';
