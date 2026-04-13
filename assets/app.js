@@ -22,6 +22,7 @@ let userStats = {
     total_time: 0,
     current_streak: 0
 };
+let isAdminAuthenticated = false;
 
 // ============================================
 // API FUNCTIONS
@@ -567,6 +568,12 @@ function quitWorkout() {
  * Show specific page
  */
 function showPage(pageId) {
+    // Check for admin authentication
+    if (pageId === 'admin' && !isAdminAuthenticated) {
+        showPage('admin-login');
+        return;
+    }
+
     document.querySelectorAll('.page-section').forEach(section => {
         section.classList.remove('active');
     });
@@ -951,6 +958,26 @@ function editAdminWorkout(workoutId) {
 }
 
 /**
+ * Handle Admin Login Verification
+ */
+function handleAdminLogin() {
+    const user = document.getElementById('adminUserField').value;
+    const pass = document.getElementById('adminPassField').value;
+    
+    if (user === 'admin' && pass === '123') {
+        isAdminAuthenticated = true;
+        showSuccess('Admin access granted!');
+        showPage('admin');
+        
+        // Clear fields
+        document.getElementById('adminUserField').value = '';
+        document.getElementById('adminPassField').value = '';
+    } else {
+        showError('Invalid admin credentials');
+    }
+}
+
+/**
  * Load workouts
  */
 async function loadWorkouts() {
@@ -1045,6 +1072,14 @@ function setupEventListeners() {
             btn.classList.add('active');
             document.getElementById(tab).classList.add('active');
         });
+    });
+    
+    // Admin login
+    document.getElementById('doAdminLogin').addEventListener('click', handleAdminLogin);
+    
+    // Support enter key in admin login
+    document.getElementById('adminPassField').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleAdminLogin();
     });
     
     // Workout execution
