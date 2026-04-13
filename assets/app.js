@@ -6,7 +6,7 @@
 // ============================================
 // CONFIGURATION
 // ============================================
-const API_BASE = '/gym_plan';  // App lives at localhost/gym_plan/
+const API_BASE = '/gym_workout-planner';  // App lives at localhost/gym_workout-planner/
 
 // ============================================
 // STATE MANAGEMENT
