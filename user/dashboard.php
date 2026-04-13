@@ -1,6 +1,6 @@
 <!-- Dashboard Section -->
 <section id="dashboard" class="page-section active">
-    <h1>Welcome to GymPlanner</h1>
+    <h1>Welcome back, <?php echo htmlspecialchars($_SESSION['username'] ?? 'Gym-Goer'); ?>! 👋</h1>
     <p class="subtitle">Your personal workout companion</p>
     
     <div class="dashboard-stats">

@@ -21,7 +21,8 @@ require_once 'config/db.php';
     <script>
         window.APP_CONFIG = {
             role: '<?php echo strtolower(trim($_SESSION['role'] ?? 'user')); ?>',
-            userId: <?php echo (int)($_SESSION['user_id'] ?? 0); ?>
+            userId: <?php echo (int)($_SESSION['user_id'] ?? 0); ?>,
+            username: '<?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>'
         };
     </script>
 </head>
@@ -29,13 +30,14 @@ require_once 'config/db.php';
     <!-- Navigation Bar -->
     <nav class="navbar">
         <div class="nav-container">
-            <div class="logo">💪 GymPlanner</div>
+            <div class="logo">  MuscleMap</div>
             <ul class="nav-menu">
                 <li><a href="#" class="nav-link active" data-page="dashboard">Dashboard</a></li>
                 <li><a href="#" class="nav-link" data-page="workouts">Workouts</a></li>
                 <li><a href="#" class="nav-link" data-page="custom">Create</a></li>
                 <li><a href="#" class="nav-link" data-page="history">History</a></li>
                 <li><a href="#" class="nav-link" data-page="progress">Progress</a></li>
+                <li><a href="#" class="nav-link" data-page="calculator">Calculator</a></li>
                 <?php if (isAdmin()): ?>
                 <li><a href="#" class="nav-link" data-page="admin">Admin</a></li>
                 <?php endif; ?>
@@ -69,6 +71,9 @@ require_once 'config/db.php';
 
         <!-- Progress Section -->
         <?php include 'user/progress_section.php'; ?>
+
+        <!-- Calculator Section -->
+        <?php include 'user/calculator.php'; ?>
 
     </div>
 

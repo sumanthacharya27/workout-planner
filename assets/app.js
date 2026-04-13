@@ -1177,6 +1177,127 @@ function editAdminWorkout(workoutId) {
     };
 }
 
+// ============================================
+// BODY CALCULATOR FUNCTIONS
+// ============================================
+
+/**
+ * Calculate BMI and update UI
+ */
+function calculateBMI() {
+    const height = parseFloat(document.getElementById('bmiHeight').value);
+    const weight = parseFloat(document.getElementById('bmiWeight').value);
+    const age = parseInt(document.getElementById('bmiAge').value);
+    
+    if (!height || !weight || isNaN(age)) {
+        showError('Please fill in all fields correctly');
+        return;
+    }
+    
+    const bmi = weight / ((height / 100) ** 2);
+    const bmiValue = bmi.toFixed(1);
+    
+    let category = '';
+    let advice = '';
+    let categoryIcon = '';
+    let color = '';
+    let markerPercent = 0;
+    
+    if (bmi < 18.5) {
+        category = 'Underweight';
+        advice = 'You are in the underweight range. Focus on a calorie surplus with nutritious whole foods and strength training to build muscle.';
+        categoryIcon = '⚠️';
+        color = '#1B98E0';
+        markerPercent = (bmi / 18.5) * 20; // Scale to 0-25%
+    } else if (bmi < 25) {
+        category = 'Normal';
+        advice = 'Great job! You are in the healthy weight range. Maintain your current lifestyle and stay active to keep your BMI in this zone.';
+        categoryIcon = '✅';
+        color = '#06D6A0';
+        markerPercent = 25 + ((bmi - 18.5) / 6.5) * 25; // Scale to 25-50%
+    } else if (bmi < 30) {
+        category = 'Overweight';
+        advice = 'You are in the overweight range. Small changes in diet and increasing physical activity can help you reach a healthier range.';
+        categoryIcon = '⚠️';
+        color = '#F7931E';
+        markerPercent = 50 + ((bmi - 25) / 5) * 25; // Scale to 50-75%
+    } else {
+        category = 'Obese';
+        advice = 'You are in the obese range. We recommend consulting a healthcare provider or a nutritionist to create a safe weight management plan.';
+        categoryIcon = '🚨';
+        color = '#EF476F';
+        markerPercent = 75 + Math.min(((bmi - 30) / 10) * 25, 25); // Scale to 75-100%
+    }
+    
+    // Update UI
+    document.getElementById('bmiResult').style.display = 'block';
+    document.getElementById('bmiValue').textContent = bmiValue;
+    document.getElementById('bmiCategory').textContent = category;
+    document.getElementById('bmiCategoryIcon').textContent = categoryIcon;
+    document.getElementById('bmiAdvice').textContent = advice;
+    document.getElementById('bmiAdvice').style.borderLeftColor = color;
+    
+    // Position marker
+    const marker = document.getElementById('bmiMarker');
+    marker.style.left = `${Math.min(Math.max(markerPercent, 5), 95)}%`;
+    
+    // Calculate healthy weight range (BMI 18.5 - 24.9)
+    const minWeight = (18.5 * ((height / 100) ** 2)).toFixed(1);
+    const maxWeight = (24.9 * ((height / 100) ** 2)).toFixed(1);
+    document.getElementById('bmiHealthyRange').textContent = `${minWeight} - ${maxWeight}`;
+    
+    showSuccess('BMI Calculated!');
+}
+
+/**
+ * Calculate BMR and TDEE
+ */
+function calculateBMR() {
+    const gender = document.getElementById('bmrGender').value;
+    const age = parseInt(document.getElementById('bmrAge').value);
+    const height = parseFloat(document.getElementById('bmrHeight').value);
+    const weight = parseFloat(document.getElementById('bmrWeight').value);
+    const activity = parseFloat(document.getElementById('bmrActivity').value);
+    
+    if (!age || !height || !weight) {
+        showError('Please fill in all fields correctly');
+        return;
+    }
+    
+    // Mifflin-St Jeor Equation
+    let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+    if (gender === 'male') {
+        bmr += 5;
+    } else {
+        bmr -= 161;
+    }
+    
+    const tdee = Math.round(bmr * activity);
+    
+    // Update UI
+    document.getElementById('bmrResult').style.display = 'block';
+    document.getElementById('bmrValue').textContent = Math.round(bmr).toLocaleString();
+    document.getElementById('tdeeValue').textContent = tdee.toLocaleString();
+    
+    // Render Goals
+    const goalsContainer = document.getElementById('bmrGoals');
+    const goals = [
+        { label: 'Weight Loss (0.5kg/week)', calories: tdee - 500, class: 'beginner' },
+        { label: 'Maintenance', calories: tdee, class: 'intermediate' },
+        { label: 'Muscle Gain (Surplus)', calories: tdee + 300, class: 'advanced' }
+    ];
+    
+    goalsContainer.innerHTML = goals.map(goal => `
+        <div class="exercise-item" style="border-left: 5px solid var(--${goal.class === 'beginner' ? 'primary' : goal.class === 'intermediate' ? 'success' : 'danger'});">
+            <div class="exercise-item-info">
+                <h4>${goal.label}</h4>
+                <p><strong>${goal.calories.toLocaleString()} kcal</strong> per day</p>
+            </div>
+        </div>
+    `).join('');
+    
+    showSuccess('BMR & TDEE Calculated!');
+}
 
 /**
  * Load workouts
@@ -1278,13 +1399,24 @@ function setupEventListeners() {
         renderAdminExercises();
     });
 
-    // Admin tabs
+    // Admin & Calculator tabs
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            const tab = btn.getAttribute('data-tab');
-            document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+            // Handle both data-tab (admin) and data-calc-tab (calculator)
+            const tab = btn.getAttribute('data-tab') || btn.getAttribute('data-calc-tab');
+            if (!tab) return;
+            
+            // Get all tab buttons and contents in the same container/context
+            const container = btn.parentElement;
+            container.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+            
+            // Get all tab contents related to this set of tabs
+            const section = btn.closest('.page-section');
+            if (section) {
+                section.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
+            }
+            
             btn.classList.add('active');
             document.getElementById(tab)?.classList.add('active');
         });
@@ -1314,6 +1446,8 @@ function setupEventListeners() {
         }
     });
 }
+
+
 
 // ============================================
 // INITIALIZATION
