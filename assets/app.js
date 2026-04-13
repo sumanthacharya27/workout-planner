@@ -23,6 +23,13 @@ let userStats = {
     current_streak: 0
 };
 let isAdminAuthenticated = false;
+let progressCharts = {
+    frequency: null,
+    workoutDistribution: null,
+    duration: null,
+    difficulty: null
+};
+let currentProgressRange = 30;
 
 // ============================================
 // API FUNCTIONS
@@ -158,6 +165,27 @@ async function fetchUserStats() {
         console.error('Error fetching stats:', error);
         showError('Error loading stats');
         return userStats;
+    }
+}
+
+/**
+ * Fetch detailed progress analytics for charts and milestones
+ */
+async function fetchProgressData(range = 30) {
+    try {
+        const response = await fetch(`${API_BASE}/api/get_progress.php?range=${range}`);
+        const result = await response.json();
+
+        if (result.success) {
+            return result;
+        }
+
+        showError(result.error || 'Failed to load progress');
+        return null;
+    } catch (error) {
+        console.error('Error fetching progress data:', error);
+        showError('Error loading progress analytics');
+        return null;
     }
 }
 
@@ -396,6 +424,182 @@ async function renderWorkoutHistory(filter = 'all') {
     `).join('');
 }
 
+function createOrUpdateChart(chartKey, canvasId, config) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    if (progressCharts[chartKey]) {
+        progressCharts[chartKey].destroy();
+    }
+
+    progressCharts[chartKey] = new Chart(canvas, config);
+}
+
+function renderProgressSummary(progressData) {
+    const stats = progressData.stats || {};
+    const weekSummary = progressData.week_summary || {};
+    const dailyData = progressData.daily_data || [];
+    const rangeWorkouts = dailyData.reduce((sum, day) => sum + Number(day.workout_count || 0), 0);
+
+    document.getElementById('progressTotalWorkouts').textContent = stats.total_workouts || 0;
+    document.getElementById('progressCurrentStreak').textContent = stats.current_streak || 0;
+    document.getElementById('progressWeekTime').textContent = `${Math.round((weekSummary.week_time || 0) / 60)}m`;
+    document.getElementById('progressRangeWorkouts').textContent = rangeWorkouts;
+}
+
+function renderPersonalRecords(records = []) {
+    const container = document.getElementById('prsList');
+
+    if (!records.length) {
+        container.innerHTML = '<p class="empty-state">Complete workouts with weights to unlock personal records.</p>';
+        return;
+    }
+
+    container.innerHTML = records.map(record => `
+        <div class="pr-item">
+            <div class="pr-exercise">${record.exercise_name}</div>
+            <div class="pr-value">${Number(record.best_weight).toFixed(1)} kg</div>
+            <div class="history-stats">
+                <span>${record.sets} × ${record.reps}</span>
+                <span>Volume: ${Math.round(record.best_volume || 0)} kg</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderAchievements(stats = {}) {
+    const totalWorkouts = Number(stats.total_workouts || 0);
+    const currentStreak = Number(stats.current_streak || 0);
+
+    const achievements = [
+        {
+            icon: '🏆',
+            name: 'First Workout',
+            desc: 'Complete your first workout',
+            unlocked: totalWorkouts >= 1
+        },
+        {
+            icon: '🔥',
+            name: 'Week Warrior',
+            desc: '7 day workout streak',
+            unlocked: currentStreak >= 7
+        },
+        {
+            icon: '💪',
+            name: 'Century Club',
+            desc: 'Complete 100 workouts',
+            unlocked: totalWorkouts >= 100
+        },
+        {
+            icon: '⚡',
+            name: 'Consistency King',
+            desc: '30 day workout streak',
+            unlocked: currentStreak >= 30
+        }
+    ];
+
+    const container = document.getElementById('achievementsList');
+    container.innerHTML = achievements.map(item => `
+        <div class="achievement-card ${item.unlocked ? 'unlocked' : 'locked'}">
+            <div class="achievement-icon">${item.icon}</div>
+            <div class="achievement-name">${item.name}</div>
+            <div class="achievement-desc">${item.desc}</div>
+        </div>
+    `).join('');
+}
+
+function renderProgressCharts(progressData) {
+    const dailyData = progressData.daily_data || [];
+    const sessionData = progressData.session_data || [];
+    const workoutDist = progressData.workout_dist || [];
+    const difficultyDist = progressData.difficulty_dist || [];
+
+    const freqLabels = dailyData.map(d => new Date(d.workout_date).toLocaleDateString());
+    const freqValues = dailyData.map(d => Number(d.workout_count || 0));
+
+    createOrUpdateChart('frequency', 'frequencyChart', {
+        type: 'line',
+        data: {
+            labels: freqLabels,
+            datasets: [{
+                label: 'Workouts',
+                data: freqValues,
+                borderColor: '#4299e1',
+                backgroundColor: 'rgba(66, 153, 225, 0.15)',
+                fill: true,
+                tension: 0.35
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+    });
+
+    createOrUpdateChart('workoutDistribution', 'exerciseChart', {
+        type: 'pie',
+        data: {
+            labels: workoutDist.map(w => w.name),
+            datasets: [{
+                data: workoutDist.map(w => Number(w.count || 0)),
+                backgroundColor: ['#4299e1', '#48bb78', '#ed8936', '#9f7aea', '#f56565', '#38b2ac']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+
+    createOrUpdateChart('duration', 'durationChart', {
+        type: 'bar',
+        data: {
+            labels: sessionData.map(item => new Date(item.completed_at).toLocaleDateString()),
+            datasets: [{
+                label: 'Minutes',
+                data: sessionData.map(item => Math.round(Number(item.duration || 0) / 60)),
+                backgroundColor: '#48bb78'
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Minutes' }
+                }
+            }
+        }
+    });
+
+    createOrUpdateChart('difficulty', 'difficultyChart', {
+        type: 'doughnut',
+        data: {
+            labels: difficultyDist.map(d => d.difficulty || 'unknown'),
+            datasets: [{
+                data: difficultyDist.map(d => Number(d.count || 0)),
+                backgroundColor: ['#68d391', '#f6ad55', '#fc8181', '#a0aec0']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+}
+
+async function loadProgressDashboard(range = currentProgressRange) {
+    const progressData = await fetchProgressData(range);
+    if (!progressData) return;
+
+    currentProgressRange = range;
+    renderProgressSummary(progressData);
+    renderProgressCharts(progressData);
+    renderPersonalRecords(progressData.personal_records || []);
+    renderAchievements(progressData.stats || {});
+}
+
 /**
  * Show success message
  */
@@ -591,6 +795,8 @@ function showPage(pageId) {
     // Load data when showing certain pages
     if (pageId === 'history') {
         renderWorkoutHistory('all');
+    } else if (pageId === 'progress') {
+        loadProgressDashboard(currentProgressRange);
     } else if (pageId === 'admin') {
         renderAdminWorkoutsList(allWorkouts);
     }
@@ -1038,6 +1244,17 @@ function setupEventListeners() {
             btn.classList.add('active');
             const filter = btn.getAttribute('data-filter');
             renderWorkoutHistory(filter);
+        });
+    });
+
+    // Filter buttons - progress range
+    document.querySelectorAll('#progress .progress-range-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('#progress .progress-range-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const range = parseInt(btn.getAttribute('data-range'), 10) || 30;
+            loadProgressDashboard(range);
         });
     });
     
