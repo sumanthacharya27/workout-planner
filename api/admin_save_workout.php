@@ -15,7 +15,23 @@ require_once '../config/db.php';
 requireAdmin();
 
 try {
+    ob_start();
     $data = json_decode(file_get_contents('php://input'), true);
+    
+    if ($data === null) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid JSON payload']);
+        exit;
+    }
+
+    // CSRF validation
+    $clientToken = $data['csrf_token'] ?? '';
+    $sessionToken = $_SESSION['csrf_token'] ?? '';
+    if (empty($sessionToken) || !hash_equals($sessionToken, $clientToken)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Invalid or missing CSRF token']);
+        exit;
+    }
     
     // Validate input
     if (empty($data['name']) || empty($data['exercises'])) {
@@ -61,12 +77,13 @@ try {
     }
     
     $pdo->commit();
-    
+    ob_clean();
     echo json_encode([
         'success' => true,
         'message' => 'Pre-made workout created successfully',
         'workoutId' => $workoutId
     ]);
+    exit;
 } catch (PDOException $e) {
     $pdo->rollBack();
     http_response_code(500);

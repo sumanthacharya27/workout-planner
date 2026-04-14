@@ -139,6 +139,7 @@ try {
     ]);
 
 } catch (PDOException $e) {
+    error_log('[get_progress] PDOException: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Failed to load progress data: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Failed to load progress data. Please try again later.']);
 }

@@ -19,6 +19,9 @@ try {
         $dateCondition = "AND wh.completed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
     }
     
+    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
+    if ($limit <= 0) $limit = 100;
+
     $query = "
     SELECT 
         wh.id,
@@ -31,17 +34,19 @@ try {
     JOIN workouts w ON wh.workout_id = w.id
     WHERE wh.user_id = ? $dateCondition
     ORDER BY wh.completed_at DESC
-    LIMIT 5
+    LIMIT $limit
 ";
     
     $stmt = $pdo->prepare($query);
     $stmt->execute([$_SESSION['user_id']]);
     $history = $stmt->fetchAll();
     
+    ob_clean();
     echo json_encode([
         'success' => true,
         'data' => $history
     ]);
+    exit;
 } catch (PDOException $e) {
     http_response_code(500);
     echo json_encode([

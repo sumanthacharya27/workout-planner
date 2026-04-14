@@ -32,18 +32,21 @@ if (!isAuthenticated()) {
     exit;
 }
 
-try {
-    $data = json_decode(file_get_contents('php://input'), true);
+    if ($data === null) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid JSON payload']);
+        exit;
+    }
 
     // ── 3. CSRF validation ────────────────────────────────────────────────────
-    /*$clientToken = $data['csrf_token'] ?? '';
+    $clientToken = $data['csrf_token'] ?? '';
     $sessionToken = $_SESSION['csrf_token'] ?? '';
 
     if (empty($sessionToken) || !hash_equals($sessionToken, $clientToken)) {
         http_response_code(403);
         echo json_encode(['success' => false, 'error' => 'Invalid or missing CSRF token']);
         exit;
-    }*/
+    }
 
     // ── 4. Input validation ───────────────────────────────────────────────────
     if (empty($data['workoutId']) || !is_numeric($data['workoutId'])) {

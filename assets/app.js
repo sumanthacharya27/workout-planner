@@ -39,7 +39,9 @@ let currentProgressRange = 30;
  */
 async function fetchWorkouts() {
     try {
-        const response = await fetch(`${API_BASE}/api/get_workouts.php`);
+        const response = await fetch(`${API_BASE}/api/get_workouts.php`, {
+            credentials: 'include'
+        });
         const result = await response.json();
 
         if (result.success) {
@@ -63,13 +65,15 @@ async function saveCustomWorkout(name, description, exercises) {
     try {
         const response = await fetch(`${API_BASE}/api/save_workout.php`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 name,
                 description,
-                exercises
+                exercises,
+                csrf_token: window.APP_CONFIG.csrfToken
             })
         });
 
@@ -96,13 +100,15 @@ async function saveWorkoutHistory(workoutId, duration, notes = '') {
     try {
         const response = await fetch(`${API_BASE}/api/save_history.php`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 workoutId,
                 duration,
-                notes
+                notes,
+                csrf_token: window.APP_CONFIG.csrfToken
             })
         });
 
@@ -126,12 +132,14 @@ async function saveWorkoutHistory(workoutId, duration, notes = '') {
 /**
  * Fetch workout history
  */
-async function fetchWorkoutHistory(filter = 'all') {
+async function fetchWorkoutHistory(filter = 'all', limit = null) {
     try {
-        const response = await fetch(`${API_BASE}/api/get_history.php?filter=${filter}`
-            , {
-                credentials: 'include'
-            });
+        let url = `${API_BASE}/api/get_history.php?filter=${filter}`;
+        if (limit) url += `&limit=${limit}`;
+
+        const response = await fetch(url, {
+            credentials: 'include'
+        });
         const result = await response.json();
 
         if (result.success) {
@@ -152,7 +160,9 @@ async function fetchWorkoutHistory(filter = 'all') {
  */
 async function fetchUserStats() {
     try {
-        const response = await fetch(`${API_BASE}/api/get_stats.php`);
+        const response = await fetch(`${API_BASE}/api/get_stats.php`, {
+            credentials: 'include'
+        });
         const result = await response.json();
 
         if (result.success) {
@@ -175,7 +185,9 @@ async function fetchUserStats() {
  */
 async function fetchProgressData(range = 30) {
     try {
-        const response = await fetch(`${API_BASE}/api/get_progress.php?range=${range}`);
+        const response = await fetch(`${API_BASE}/api/get_progress.php?range=${range}`, {
+            credentials: 'include'
+        });
         const result = await response.json();
 
         if (result.success) {
@@ -198,6 +210,7 @@ async function adminSaveWorkout(name, description, difficulty, exercises) {
     try {
         const response = await fetch(`${API_BASE}/api/admin_save_workout.php`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -205,7 +218,8 @@ async function adminSaveWorkout(name, description, difficulty, exercises) {
                 name,
                 description,
                 difficulty,
-                exercises
+                exercises,
+                csrf_token: window.APP_CONFIG.csrfToken
             })
         });
 
@@ -240,7 +254,10 @@ async function deleteWorkout(workoutId) {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ workoutId: workoutId })
+            body: JSON.stringify({ 
+                workoutId: workoutId,
+                csrf_token: window.APP_CONFIG.csrfToken
+            })
         })
 
         const result = await response.json();
@@ -266,6 +283,7 @@ async function updateWorkout(workoutId, name, description, difficulty, exercises
     try {
         const response = await fetch(`${API_BASE}/api/update_workout.php`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -274,7 +292,8 @@ async function updateWorkout(workoutId, name, description, difficulty, exercises
                 name,
                 description,
                 difficulty,
-                exercises
+                exercises,
+                csrf_token: window.APP_CONFIG.csrfToken
             })
         });
 
@@ -376,15 +395,14 @@ async function loadRecentWorkouts() {
     const container = document.getElementById('recentWorkoutsList');
 
     try {
-        const history = await fetchWorkoutHistory('all');
+        const history = await fetchWorkoutHistory('all', 5);
 
         if (!history || history.length === 0) {
             container.innerHTML = `<p class="empty-state">No workouts yet. Start your first workout!</p>`;
             return;
         }
 
-        // Only take latest 5
-        const recent = history.slice(0, 5);
+        const recent = history;
 
         container.innerHTML = recent.map(item => `
             <div class="recent-item">

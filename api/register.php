@@ -64,6 +64,11 @@ try {
     $_SESSION['username'] = sanitize($username);
     $_SESSION['role'] = 'user'; // New registrations are always regular users
 
+    // Generate CSRF token
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
     // Initialize user stats for the new user
     $statsStmt = $pdo->prepare('INSERT INTO user_stats (user_id) VALUES (?)');
     $statsStmt->execute([$newUserId]);

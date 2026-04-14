@@ -22,7 +22,8 @@ require_once 'config/db.php';
         window.APP_CONFIG = {
             role: '<?php echo strtolower(trim($_SESSION['role'] ?? 'user')); ?>',
             userId: <?php echo (int)($_SESSION['user_id'] ?? 0); ?>,
-            username: '<?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>'
+            username: '<?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?>',
+            csrfToken: '<?php echo $_SESSION['csrf_token'] ?? ''; ?>'
         };
     </script>
 </head>
