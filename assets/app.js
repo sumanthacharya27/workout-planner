@@ -231,13 +231,14 @@ async function deleteWorkout(workoutId) {
     }
 
     try {
-        const response = await fetch(`${API_BASE}/api/delete_workout.php`, {
+        const response = await fetch('/api/delete_workout.php', {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ workoutId })
-        });
+  },
+  body: JSON.stringify({ workoutId: id })
+})
 
         const result = await response.json();
 
