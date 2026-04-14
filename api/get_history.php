@@ -20,18 +20,19 @@ try {
     }
     
     $query = "
-        SELECT 
-            wh.id,
-            wh.workout_id,
-            wh.duration,
-            wh.completed_at,
-            w.name as workout_name,
-            (SELECT COUNT(*) FROM exercises WHERE workout_id = wh.workout_id) as exercise_count
-        FROM workout_history wh
-        JOIN workouts w ON wh.workout_id = w.id
-        WHERE wh.user_id = ? $dateCondition
-        ORDER BY wh.completed_at DESC
-    ";
+    SELECT 
+        wh.id,
+        wh.workout_id,
+        wh.duration,
+        wh.completed_at,
+        w.name as workout_name,
+        (SELECT COUNT(*) FROM exercises WHERE workout_id = wh.workout_id) as exercise_count
+    FROM workout_history wh
+    JOIN workouts w ON wh.workout_id = w.id
+    WHERE wh.user_id = ? $dateCondition
+    ORDER BY wh.completed_at DESC
+    LIMIT 5
+";
     
     $stmt = $pdo->prepare($query);
     $stmt->execute([$_SESSION['user_id']]);

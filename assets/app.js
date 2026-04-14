@@ -128,7 +128,10 @@ async function saveWorkoutHistory(workoutId, duration, notes = '') {
  */
 async function fetchWorkoutHistory(filter = 'all') {
     try {
-        const response = await fetch(`${API_BASE}/api/get_history.php?filter=${filter}`);
+        const response = await fetch(`${API_BASE}/api/get_history.php?filter=${filter}`
+            , {
+                credentials: 'include'
+            });
         const result = await response.json();
 
         if (result.success) {
@@ -231,14 +234,14 @@ async function deleteWorkout(workoutId) {
     }
 
     try {
-        const response = await fetch('/api/delete_workout.php', {
+        const response = await fetch(`${API_BASE}/api/delete_workout.php`, {
             method: 'POST',
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ workoutId: id })
-})
+            },
+            body: JSON.stringify({ workoutId: workoutId })
+        })
 
         const result = await response.json();
 
@@ -366,6 +369,40 @@ function renderSavedWorkouts(workouts) {
             </div>
         </div>
     `).join('');
+}
+async function loadRecentWorkouts() {
+
+
+    const container = document.getElementById('recentWorkoutsList');
+
+    try {
+        const history = await fetchWorkoutHistory('all');
+
+        if (!history || history.length === 0) {
+            container.innerHTML = `<p class="empty-state">No workouts yet. Start your first workout!</p>`;
+            return;
+        }
+
+        // Only take latest 5
+        const recent = history.slice(0, 5);
+
+        container.innerHTML = recent.map(item => `
+            <div class="recent-item">
+                <div class="recent-info">
+                    <h3>${item.workout_name}</h3>
+                    <p>${new Date(item.completed_at).toLocaleString()}</p>
+                </div>
+                <div class="recent-meta">
+                    ⏱️ ${Math.round(item.duration / 60)} mins<br>
+                    💪 ${item.exercise_count} exercises
+                </div>
+            </div>
+        `).join('');
+
+    } catch (err) {
+        console.error("Error loading recent workouts:", err);
+        container.innerHTML = `<p class="empty-state">Failed to load workouts</p>`;
+    }
 }
 
 /**
@@ -814,6 +851,8 @@ function showPage(pageId) {
         loadProgressDashboard(currentProgressRange);
     } else if (pageId === 'admin') {
         renderAdminWorkoutsList(allWorkouts);
+    } else if (pageId === 'dashboard') {
+        loadRecentWorkouts();
     }
 }
 
@@ -1189,21 +1228,21 @@ function calculateBMI() {
     const height = parseFloat(document.getElementById('bmiHeight').value);
     const weight = parseFloat(document.getElementById('bmiWeight').value);
     const age = parseInt(document.getElementById('bmiAge').value);
-    
+
     if (!height || !weight || isNaN(age)) {
         showError('Please fill in all fields correctly');
         return;
     }
-    
+
     const bmi = weight / ((height / 100) ** 2);
     const bmiValue = bmi.toFixed(1);
-    
+
     let category = '';
     let advice = '';
     let categoryIcon = '';
     let color = '';
     let markerPercent = 0;
-    
+
     if (bmi < 18.5) {
         category = 'Underweight';
         advice = 'You are in the underweight range. Focus on a calorie surplus with nutritious whole foods and strength training to build muscle.';
@@ -1229,7 +1268,7 @@ function calculateBMI() {
         color = '#EF476F';
         markerPercent = 75 + Math.min(((bmi - 30) / 10) * 25, 25); // Scale to 75-100%
     }
-    
+
     // Update UI
     document.getElementById('bmiResult').style.display = 'block';
     document.getElementById('bmiValue').textContent = bmiValue;
@@ -1237,16 +1276,16 @@ function calculateBMI() {
     document.getElementById('bmiCategoryIcon').textContent = categoryIcon;
     document.getElementById('bmiAdvice').textContent = advice;
     document.getElementById('bmiAdvice').style.borderLeftColor = color;
-    
+
     // Position marker
     const marker = document.getElementById('bmiMarker');
     marker.style.left = `${Math.min(Math.max(markerPercent, 5), 95)}%`;
-    
+
     // Calculate healthy weight range (BMI 18.5 - 24.9)
     const minWeight = (18.5 * ((height / 100) ** 2)).toFixed(1);
     const maxWeight = (24.9 * ((height / 100) ** 2)).toFixed(1);
     document.getElementById('bmiHealthyRange').textContent = `${minWeight} - ${maxWeight}`;
-    
+
     showSuccess('BMI Calculated!');
 }
 
@@ -1259,12 +1298,12 @@ function calculateBMR() {
     const height = parseFloat(document.getElementById('bmrHeight').value);
     const weight = parseFloat(document.getElementById('bmrWeight').value);
     const activity = parseFloat(document.getElementById('bmrActivity').value);
-    
+
     if (!age || !height || !weight) {
         showError('Please fill in all fields correctly');
         return;
     }
-    
+
     // Mifflin-St Jeor Equation
     let bmr = (10 * weight) + (6.25 * height) - (5 * age);
     if (gender === 'male') {
@@ -1272,14 +1311,14 @@ function calculateBMR() {
     } else {
         bmr -= 161;
     }
-    
+
     const tdee = Math.round(bmr * activity);
-    
+
     // Update UI
     document.getElementById('bmrResult').style.display = 'block';
     document.getElementById('bmrValue').textContent = Math.round(bmr).toLocaleString();
     document.getElementById('tdeeValue').textContent = tdee.toLocaleString();
-    
+
     // Render Goals
     const goalsContainer = document.getElementById('bmrGoals');
     const goals = [
@@ -1287,7 +1326,7 @@ function calculateBMR() {
         { label: 'Maintenance', calories: tdee, class: 'intermediate' },
         { label: 'Muscle Gain (Surplus)', calories: tdee + 300, class: 'advanced' }
     ];
-    
+
     goalsContainer.innerHTML = goals.map(goal => `
         <div class="exercise-item" style="border-left: 5px solid var(--${goal.class === 'beginner' ? 'primary' : goal.class === 'intermediate' ? 'success' : 'danger'});">
             <div class="exercise-item-info">
@@ -1296,7 +1335,7 @@ function calculateBMR() {
             </div>
         </div>
     `).join('');
-    
+
     showSuccess('BMR & TDEE Calculated!');
 }
 
@@ -1316,6 +1355,7 @@ async function initPage() {
     // Load all data
     await loadWorkouts();
     await fetchUserStats();
+    await loadRecentWorkouts();
 
     // Set up event listeners
     setupEventListeners();
@@ -1407,17 +1447,17 @@ function setupEventListeners() {
             // Handle both data-tab (admin) and data-calc-tab (calculator)
             const tab = btn.getAttribute('data-tab') || btn.getAttribute('data-calc-tab');
             if (!tab) return;
-            
+
             // Get all tab buttons and contents in the same container/context
             const container = btn.parentElement;
             container.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
-            
+
             // Get all tab contents related to this set of tabs
             const section = btn.closest('.page-section');
             if (section) {
                 section.querySelectorAll('.admin-tab-content').forEach(c => c.classList.remove('active'));
             }
-            
+
             btn.classList.add('active');
             document.getElementById(tab)?.classList.add('active');
         });
