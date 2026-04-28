@@ -122,20 +122,7 @@ try {
     ]);
     exit; // ✅ CRITICAL
 }
-
-    // Guard against race condition where another request deleted it first
-   /* if ($stmt->rowCount() === 0) {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'Workout could not be deleted — it may have already been removed']);
-        exit;
-    }
-
-    echo json_encode([
-        'success' => true,
-        'message' => 'Workout deleted successfully'
-    ]); */
-
-} catch (PDOException $e) {
+catch (PDOException $e) {
     // Log internally — never expose raw DB errors to the client
     error_log('[delete_workout] PDOException: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
 
